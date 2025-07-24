@@ -1,11 +1,29 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, Eye, Edit3, UserPlus, RotateCcw, Download, Menu, X, Search, Bell, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit3, UserPlus, RotateCcw, Download, Menu, X, Search, Bell, ChevronDown, Clock } from 'lucide-react';
 import Sidebar from '@/components/sidebar';
 import Header from '@/components/header';
 
 function RoutesSchedules() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingRoute, setEditingRoute] = useState(null);
+  const [formData, setFormData] = useState({
+    routeName: '',
+    startAddress: '',
+    startCity: '',
+    startState: '',
+    startZipcode: '',
+    endAddress: '',
+    endCity: '',
+    endState: '',
+    endZipcode: '',
+    stops: '',
+    assignedDriver: '',
+    eta: '',
+    activeDays: '',
+    status: ''
+  });
 
   const routes = [
     {
@@ -120,6 +138,61 @@ function RoutesSchedules() {
     }
   ];
 
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const openAddModal = () => {
+    setEditingRoute(null);
+    setFormData({
+      routeName: '',
+      startAddress: '',
+      startCity: '',
+      startState: '',
+      startZipcode: '',
+      endAddress: '',
+      endCity: '',
+      endState: '',
+      endZipcode: '',
+      stops: '',
+      assignedDriver: '',
+      eta: '',
+      activeDays: '',
+      status: ''
+    });
+    setShowModal(true);
+  };
+
+  const openEditModal = (route) => {
+    setEditingRoute(route);
+    setFormData({
+      routeName: route.routeName,
+      startAddress: route.startLocation,
+      startCity: '',
+      startState: '',
+      startZipcode: '',
+      endAddress: route.endLocation,
+      endCity: '',
+      endState: '',
+      endZipcode: '',
+      stops: route.stops,
+      assignedDriver: route.assignedDriver,
+      eta: route.eta,
+      activeDays: route.activeDays,
+      status: route.status
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Handle form submission here
+    setShowModal(false);
+  };
+
   const toggleDropdown = (index) => {
     setActiveDropdown(activeDropdown === index ? null : index);
   };
@@ -169,7 +242,10 @@ function RoutesSchedules() {
             
             {/* Add New Button */}
             <div className="px-4 py-3 border-b border-gray-200 flex justify-end">
-              <button className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700">
+              <button 
+                onClick={openAddModal}
+                className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700"
+              >
                 Add New
               </button>
             </div>
@@ -224,7 +300,13 @@ function RoutesSchedules() {
                               <Eye className="w-4 h-4 mr-2" />
                               View
                             </button>
-                            <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
+                            <button 
+                              onClick={() => {
+                                openEditModal(route);
+                                setActiveDropdown(null);
+                              }}
+                              className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100"
+                            >
                               <Edit3 className="w-4 h-4 mr-2" />
                               Edit
                             </button>
@@ -253,6 +335,261 @@ function RoutesSchedules() {
           </div>
         </div>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-[#003C72]">
+                {editingRoute ? 'Edit Routes & Schedules' : 'Add Routes & Schedules'}
+              </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {/* Route Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Route Name
+                </label>
+                <input
+                  type="text"
+                  name="routeName"
+                  value={formData.routeName}
+                  onChange={handleInputChange}
+                  placeholder="Route Name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                />
+              </div>
+
+              {/* Start Location */}
+              <div>
+                <label className="block text-sm font-bold text-[#003C72] mb-2">
+                  Start Location
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <input
+                      type="text"
+                      name="startAddress"
+                      value={formData.startAddress}
+                      onChange={handleInputChange}
+                      placeholder="Address"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    />
+                  </div>
+                  <div>
+                    <select
+                      name="startCity"
+                      value={formData.startCity}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    >
+                      <option value="">Select City</option>
+                      <option value="New York">New York</option>
+                      <option value="Los Angeles">Los Angeles</option>
+                      <option value="Chicago">Chicago</option>
+                    </select>
+                  </div>
+                  <div>
+                    <select
+                      name="startState"
+                      value={formData.startState}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    >
+                      <option value="">Select State</option>
+                      <option value="NY">New York</option>
+                      <option value="CA">California</option>
+                      <option value="IL">Illinois</option>
+                    </select>
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      name="startZipcode"
+                      value={formData.startZipcode}
+                      onChange={handleInputChange}
+                      placeholder="Zipcode"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* End Location */}
+              <div>
+                <label className="block text-sm font-bold text-[#003C72] mb-2">
+                  End Location
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <input
+                      type="text"
+                      name="endAddress"
+                      value={formData.endAddress}
+                      onChange={handleInputChange}
+                      placeholder="Address"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    />
+                  </div>
+                  <div>
+                    <select
+                      name="endCity"
+                      value={formData.endCity}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    >
+                      <option value="">Select City</option>
+                      <option value="New York">New York</option>
+                      <option value="Los Angeles">Los Angeles</option>
+                      <option value="Chicago">Chicago</option>
+                    </select>
+                  </div>
+                  <div>
+                    <select
+                      name="endState"
+                      value={formData.endState}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    >
+                      <option value="">Select State</option>
+                      <option value="NY">New York</option>
+                      <option value="CA">California</option>
+                      <option value="IL">Illinois</option>
+                    </select>
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      name="endZipcode"
+                      value={formData.endZipcode}
+                      onChange={handleInputChange}
+                      placeholder="Zipcode"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {/* Stops */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Stops
+                  </label>
+                  <select
+                    name="stops"
+                    value={formData.stops}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                  >
+                    <option value="">Select Stops</option>
+                    <option value="Jammu Hospital">Jammu Hospital</option>
+                    <option value="Capitol Hospital">Capitol Hospital</option>
+                    <option value="Bellevue Hospital">Bellevue Hospital</option>
+                    <option value="Oxford Hospital">Oxford Hospital</option>
+                    <option value="Jim Pharmacy">Jim Pharmacy</option>
+                  </select>
+                </div>
+
+                {/* Assigned Driver */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Assigned Driver
+                  </label>
+                  <select
+                    name="assignedDriver"
+                    value={formData.assignedDriver}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                  >
+                    <option value="">Select Assigned Driver</option>
+                    <option value="David M.">David M.</option>
+                    <option value="Carla G.">Carla G.</option>
+                    <option value="David J.">David J.</option>
+                    <option value="Catrin D.">Catrin D.</option>
+                  </select>
+                </div>
+
+                {/* ETA */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ETA
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="eta"
+                      value={formData.eta}
+                      onChange={handleInputChange}
+                      placeholder="2:10 PM"
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    />
+                    <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
+                </div>
+
+                {/* Active Days */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Active Days
+                  </label>
+                  <select
+                    name="activeDays"
+                    value={formData.activeDays}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                  >
+                    <option value="">Select Active Days</option>
+                    <option value="Mon-Fri">Mon-Fri</option>
+                    <option value="Sat only">Sat only</option>
+                    <option value="Sun only">Sun only</option>
+                    <option value="Mon-Sun">Mon-Sun</option>
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                  >
+                    <option value="">Select Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Archive">Archive</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end pt-6">
+                <button
+                  type="submit"
+                  className="bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                >
+                  Submit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

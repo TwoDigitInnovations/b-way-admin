@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, Eye, Edit3, UserPlus, RotateCcw, Download, Menu, X, Search, Bell, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, Eye, Edit3, UserPlus, RotateCcw, Download, Menu, X, Search, Bell, ChevronDown, Clock } from 'lucide-react';
 import Sidebar from '@/components/sidebar';
 import Header from '@/components/header';
 
 function Orders() {
-  const [activeDropdown, setActiveDropdown] = useState(null);
+   const [activeDropdown, setActiveDropdown] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  const toggleDropdown = (index) => {
+    setActiveDropdown(activeDropdown === index ? null : index);
+  };
 
   const orders = [
     {
@@ -130,6 +136,12 @@ function Orders() {
     }
   ];
 
+  const handleEditClick = (order) => {
+    setSelectedOrder(order);
+    setShowEditModal(true);
+    setActiveDropdown(null);
+  };
+
   const getStatusBadge = (status) => {
     const statusStyles = {
       'Cancelled': 'bg-red-100 text-red-800 border border-red-200',
@@ -139,7 +151,6 @@ function Orders() {
       'Return Created': 'bg-teal-100 text-teal-800 border border-teal-200',
       'Invoice Generated': 'bg-green-100 text-green-800  border-green-800'
     };
-
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
         {status}
@@ -147,10 +158,7 @@ function Orders() {
     );
   };
 
-  const toggleDropdown = (index) => {
-    setActiveDropdown(activeDropdown === index ? null : index);
-  };
-
+ 
   const handleClickOutside = () => {
     setActiveDropdown(null);
   };
@@ -159,7 +167,7 @@ function Orders() {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
-
+  
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -223,30 +231,33 @@ function Orders() {
                           <MoreHorizontal className="w-5 h-5 text-gray-500" />
                         </button>
                         
-                      {activeDropdown === index && (
-  <div className="absolute right-0 top-8 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10">
-    <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-      <Eye className="w-4 h-4 mr-2" />
-      View
-    </button>
-    <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-      <Edit3 className="w-4 h-4 mr-2" />
-      Edit
-    </button>
-    <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-      <UserPlus className="w-4 h-4 mr-2" />
-      Assign
-    </button>
-    <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-      <RotateCcw className="w-4 h-4 mr-2" />
-      Create Return
-    </button>
-    <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-      <Download className="w-4 h-4 mr-2" />
-      Download Return Load
-    </button>
-  </div>
-)}
+                        {activeDropdown === index && (
+                          <div className="absolute right-0 top-8 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10">
+                            <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
+                              <Eye className="w-4 h-4 mr-2" />
+                              View
+                            </button>
+                            <button 
+                              onClick={() => handleEditClick(order)}
+                              className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100"
+                            >
+                              <Edit3 className="w-4 h-4 mr-2" />
+                              Edit
+                            </button>
+                            <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Assign
+                            </button>
+                            <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
+                              <RotateCcw className="w-4 h-4 mr-2" />
+                              Create Return
+                            </button>
+                            <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
+                              <Download className="w-4 h-4 mr-2" />
+                              Download Return Load
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -266,6 +277,172 @@ function Orders() {
           </div>
         </div>
       </div>
+
+      {/* Edit Order Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Edit Order</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 sm:p-6">
+              {/* Item(S) and Qty Row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Item(S)</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                    <option>Select Item(S)</option>
+                    <option selected>{selectedOrder?.items}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Qty</label>
+                  <input
+                    type="number"
+                    defaultValue={selectedOrder?.qty}
+                    placeholder="Qty"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Route</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                    <option>Select Route</option>
+                    <option selected>{selectedOrder?.route}</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Pickup Location Section */}
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-[#003C72] mb-3">Pickup Location</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <input
+                      type="text"
+                      defaultValue={selectedOrder?.pickupLocation}
+                      placeholder="Address"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                      <option>Select City</option>
+                      <option selected>New York</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                      <option>Select State</option>
+                      <option selected>NY</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
+                    <input
+                      type="text"
+                      placeholder="Zipcode"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Delivery Location Section */}
+              <div className="mb-6">
+                <h3 className="text-md font-semibold text-[#003C72] mb-3">Delivery Location</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <input
+                      type="text"
+                      defaultValue={selectedOrder?.deliveryLocation}
+                      placeholder="Address"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                      <option>Select City</option>
+                      <option selected>New York</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                      <option>Select State</option>
+                      <option selected>NY</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
+                    <input
+                      type="text"
+                      placeholder="Zipcode"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Row - Assigned Driver, ETA, Status */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Assigned Driver</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                    <option>Select Assigned Driver</option>
+                    <option selected>{selectedOrder?.assignedDriver}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">ETA</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      defaultValue={selectedOrder?.eta}
+                      placeholder="2:10 PM"
+                      className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                    />
+                    <Clock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                    <option>Select Status</option>
+                    <option selected={selectedOrder?.status === 'Cancelled'}>Cancelled</option>
+                    <option selected={selectedOrder?.status === 'Delivered'}>Delivered</option>
+                    <option selected={selectedOrder?.status === 'Picked Up'}>Picked Up</option>
+                    <option selected={selectedOrder?.status === 'Scheduled'}>Scheduled</option>
+                    <option selected={selectedOrder?.status === 'Return Created'}>Return Created</option>
+                    <option selected={selectedOrder?.status === 'Invoice Generated'}>Invoice Generated</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-start">
+                <button className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors">
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

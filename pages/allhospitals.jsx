@@ -1,13 +1,268 @@
-import React, { useState } from 'react';
-import { MoreHorizontal, Eye, Edit3, UserPlus, RotateCcw, Download, Menu, X, Search, Bell, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MoreHorizontal, Eye, Edit3, UserPlus, RotateCcw, Download, Menu, X, Search, Bell, ChevronDown, Clock } from 'lucide-react';
 import Sidebar from '@/components/sidebar';
 import Header from '@/components/header';
 
+// Add/Edit Modal Component
+function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
+  const [formData, setFormData] = useState({
+    hospitalName: '',
+    contactPerson: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipcode: '',
+    assignedRoute: '',
+    deliveryWindow: '',
+    type: ''
+  });
+
+  useEffect(() => {
+    if (mode === 'edit' && facility) {
+      setFormData({
+        hospitalName: facility.hospitalName || '',
+        contactPerson: facility.contactPerson || '',
+        phone: facility.phone || '',
+        address: facility.address || '',
+        city: '',
+        state: '',
+        zipcode: '',
+        assignedRoute: facility.assignedRoute || '',
+        deliveryWindow: facility.deliveryWindow || '',
+        type: facility.type || ''
+      });
+    } else {
+      // Reset form for add mode
+      setFormData({
+        hospitalName: '',
+        contactPerson: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        zipcode: '',
+        assignedRoute: '',
+        deliveryWindow: '',
+        type: ''
+      });
+    }
+  }, [mode, facility, isOpen]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-[#003C72]">
+            {mode === 'add' ? 'Add Drivers & Vehicles' : 'Edit Drivers & Vehicles'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Row 1 */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Name</label>
+              <input
+                type="text"
+                name="hospitalName"
+                value={formData.hospitalName}
+                onChange={handleInputChange}
+                placeholder="Name"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-700"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Contact Person</label>
+              <input
+                type="text"
+                name="contactPerson"
+                value={formData.contactPerson}
+                onChange={handleInputChange}
+                placeholder="Contact Person"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-700"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Phone</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="Phone"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-700"
+                required
+              />
+            </div>
+
+            {/* Row 2 */}
+            <div className="space-y-2 md:col-span-3">
+              <label className="block text-sm font-medium text-gray-700">Address</label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                placeholder="Address"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-700"
+                required
+              />
+            </div>
+
+            {/* Row 3 */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">City</label>
+              <select
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-gray-700"
+                required
+              >
+                <option value="">Select City</option>
+                <option value="New York">New York</option>
+                <option value="Los Angeles">Los Angeles</option>
+                <option value="Chicago">Chicago</option>
+                <option value="Houston">Houston</option>
+                <option value="Phoenix">Phoenix</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">State</label>
+              <select
+                name="state"
+                value={formData.state}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-gray-700"
+                required
+              >
+                <option value="">Select State</option>
+                <option value="NY">New York</option>
+                <option value="CA">California</option>
+                <option value="IL">Illinois</option>
+                <option value="TX">Texas</option>
+                <option value="AZ">Arizona</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Zipcode</label>
+              <input
+                type="text"
+                name="zipcode"
+                value={formData.zipcode}
+                onChange={handleInputChange}
+                placeholder="Zipcode"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-700"
+                required
+              />
+            </div>
+
+            {/* Row 4 */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Assigned Route</label>
+              <select
+                name="assignedRoute"
+                value={formData.assignedRoute}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-gray-700"
+                required
+              >
+                <option value="">Select Assigned Route</option>
+                <option value="David M.">David M.</option>
+                <option value="Carla G.">Carla G.</option>
+                <option value="David J.">David J.</option>
+                <option value="Catrin D.">Catrin D.</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Delivery Window</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="deliveryWindow"
+                  value={formData.deliveryWindow}
+                  onChange={handleInputChange}
+                  placeholder="2PM-6PM"
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-700"
+                  required
+                />
+                <Clock className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Type</label>
+              <select
+                name="type"
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-gray-700"
+                required
+              >
+                <option value="">Select Type</option>
+                <option value="Hospital">Hospital</option>
+                <option value="Pharmacy">Pharmacy</option>
+                <option value="Clinic">Clinic</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="mt-8">
+            <button
+              type="submit"
+              className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+            >
+              Submit
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Main Component
 function HospitalsFacilities() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('add');
+  const [selectedFacility, setSelectedFacility] = useState(null);
 
-  const facilities = [
+  const [facilities, setFacilities] = useState([
     {
       no: 1,
       hospitalName: 'Jammu Hospital',
@@ -108,7 +363,7 @@ function HospitalsFacilities() {
       deliveryWindow: '2PM-6PM',
       type: 'Hospital'
     }
-  ];
+  ]);
 
   const toggleDropdown = (index) => {
     setActiveDropdown(activeDropdown === index ? null : index);
@@ -118,7 +373,36 @@ function HospitalsFacilities() {
     setActiveDropdown(null);
   };
 
-  React.useEffect(() => {
+  const handleAddNew = () => {
+    setModalMode('add');
+    setSelectedFacility(null);
+    setModalOpen(true);
+  };
+
+  const handleEdit = (facility) => {
+    setModalMode('edit');
+    setSelectedFacility(facility);
+    setModalOpen(true);
+    setActiveDropdown(null);
+  };
+
+  const handleModalSubmit = (formData) => {
+    if (modalMode === 'add') {
+      const newFacility = {
+        ...formData,
+        no: facilities.length + 1
+      };
+      setFacilities([...facilities, newFacility]);
+    } else if (modalMode === 'edit' && selectedFacility) {
+      setFacilities(facilities.map(f => 
+        f.no === selectedFacility.no 
+          ? { ...formData, no: selectedFacility.no }
+          : f
+      ));
+    }
+  };
+
+  useEffect(() => {
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
@@ -146,7 +430,10 @@ function HospitalsFacilities() {
             
             {/* Add New Button */}
             <div className="px-4 py-3 border-b border-gray-200 flex justify-end">
-              <button className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700">
+              <button 
+                onClick={handleAddNew}
+                className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700 transition-colors"
+              >
                 Add New
               </button>
             </div>
@@ -195,7 +482,10 @@ function HospitalsFacilities() {
                               <Eye className="w-4 h-4 mr-2" />
                               View
                             </button>
-                            <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
+                            <button 
+                              onClick={() => handleEdit(facility)}
+                              className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100"
+                            >
                               <Edit3 className="w-4 h-4 mr-2" />
                               Edit
                             </button>
@@ -224,6 +514,15 @@ function HospitalsFacilities() {
           </div>
         </div>
       </div>
+
+      {/* Modal */}
+      <AddEditModal 
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        mode={modalMode}
+        facility={selectedFacility}
+        onSubmit={handleModalSubmit}
+      />
     </div>
   );
 }

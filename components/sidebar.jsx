@@ -17,7 +17,7 @@ import { useRouter } from 'next/router';
 const Sidebar = () => {
   const router = useRouter();
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
+    { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboardv' },
     { icon: '/images/s1.png', label: 'Orders', href: '/ordersv' },
     { icon: '/images/s2.png', label: 'Routes & Schedules', href: '/allroutes' },
     { icon: '/images/s3.png', label: 'Hospitals & Facilities', href: '/allhospitals' },

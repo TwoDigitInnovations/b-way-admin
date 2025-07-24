@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MoreHorizontal, Eye, Edit3, UserPlus, RotateCcw, Download, Menu, X, Search, Bell, ChevronDown, Clock } from 'lucide-react';
 import Sidebar from '@/components/sidebar';
 import Header from '@/components/header';
+import Layout from '@/components/layout';
 
 function Orders() {
    const [activeDropdown, setActiveDropdown] = useState(null);
@@ -169,24 +170,8 @@ function Orders() {
   }, []);
   
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out lg:w-64`}>
-        <Sidebar />
-      </div>
-      
-      {/* Sidebar Overlay for mobile */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <Layout title="Orders">
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 w-full lg:w-auto">
-        <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} title="Orders" />
-        <div className="p-3 sm:p-4 lg:p-6">
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             
             {/* Table with Horizontal Scroll for All Screen Sizes */}
@@ -211,7 +196,7 @@ function Orders() {
                   {orders.map((order, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-2 py-2 text-sm text-gray-900 truncate">{order.no}</td>
-                      <td className="px-2 py-2 text-sm text-blue-600 font-medium truncate">{order.orderId}</td>
+                      <td className="px-2 py-2 text-sm text-orange-500 font-medium truncate">{order.orderId}</td>
                       <td className="px-2 py-2 text-sm text-gray-900 truncate" title={order.items}>{order.items}</td>
                       <td className="px-2 py-2 text-sm text-gray-900 truncate">{order.qty}</td>
                       <td className="px-2 py-2 text-sm text-gray-900 truncate">{order.pickupLocation}</td>
@@ -275,8 +260,6 @@ function Orders() {
               <button className="text-gray-500 hover:text-gray-700 px-3 py-1 rounded text-sm">Next</button>
             </div>
           </div>
-        </div>
-      </div>
 
       {/* Edit Order Modal */}
       {showEditModal && (
@@ -443,7 +426,7 @@ function Orders() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 }
 

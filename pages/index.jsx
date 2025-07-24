@@ -66,7 +66,7 @@ export default function BWayLoginPage({ loader }) {
         <div className="max-w-md w-full space-y-6">
           {/* Logo - Centered */}
           <div className="flex items-center justify-center">
-            <Image src="/images/logo.png" width={180} height={180} />
+            <Image src="/images/Logo.png" width={180} height={180} />
           </div>
 
           {/* Sign In Form */}

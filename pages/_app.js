@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import Loader from "@/components/loader";
 import toast, { Toaster } from "react-hot-toast";
 import { PrimeReactProvider } from 'primereact/api';
+import "primereact/resources/themes/lara-light-cyan/theme.css";
 
 export const userContext = createContext();
 export const openCartContext = createContext();

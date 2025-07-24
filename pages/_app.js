@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 // import Layout from "@/components/Layout";
 import Loader from "@/components/loader";
 import toast, { Toaster } from "react-hot-toast";
+import { PrimeReactProvider } from 'primereact/api';
 
 export const userContext = createContext();
 export const openCartContext = createContext();
@@ -37,7 +38,7 @@ function App({ Component, pageProps }) {
   // }, []);
 
   return (
-    <div>
+    <PrimeReactProvider>
       <Toaster position="top-right" reverseOrder={false} />
         <userContext.Provider value={[user, setUser]}>
           {/* <openCartContext.Provider value={[openCart, setOpenCart]}>
@@ -56,7 +57,7 @@ function App({ Component, pageProps }) {
             </cartContext.Provider>
           </openCartContext.Provider> */}
         </userContext.Provider>
-    </div>
+    </PrimeReactProvider>
   );
 }
 export default App;

@@ -20,6 +20,11 @@
 # production
 /build
 
+# bun
+/.bun/
+.bun.lockb
+.bun.lock
+
 # misc
 .DS_Store
 *.pem

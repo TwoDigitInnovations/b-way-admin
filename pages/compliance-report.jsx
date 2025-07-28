@@ -11,50 +11,41 @@ import {
   Bell,
   ChevronDown,
   Trash,
-  Clock,
-  Plus,
-  Check,
 } from "lucide-react";
-import Sidebar from "@/components/sidebar";
-import Header from "@/components/header";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
-import isAuth from "@/components/isAuth";
 
 function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    licenseNo: "",
-    vehicleType: "",
-    assignedRoute: "",
+    date: "",
+    regulationType: "",
+    audit: "",
+    violation: "",
+    violationType: "",
     status: "",
   });
 
   useEffect(() => {
     if (mode === "edit" && facility) {
       setFormData({
-        name: facility.name || "",
-        email: facility.email || "",
-        phone: facility.phone || "",
-        licenseNo: facility.licenseNo || "",
-        vehicleType: facility.vehicleType || "",
-        assignedRoute: facility.assignedRoute || "",
+        date: facility.date || "",
+        regulationType: facility.regulationType || "",
+        audit: facility.audit || "",
+        violation: facility.violation || "",
+        violationType: facility.violationType || "",
         status: facility.status || "",
       });
     } else {
       // Reset form for add mode
       setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        licenseNo: "",
-        vehicleType: "",
-        assignedRoute: "",
+        date: "",
+        regulationType: "",
+        audit: "",
+        violation: "",
+        violationType: "",
         status: "",
       });
     }
@@ -77,14 +68,12 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 bg-opavehicleType-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-[#003C72]">
-            {mode === "add"
-              ? "Add Drivers & Vehicles"
-              : "Edit Drivers & Vehicles"}
+            {mode === "add" ? "Add Compliance Report" : "Edit Compliance Report"}
           </h2>
           <button
             onClick={onClose}
@@ -100,14 +89,29 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
             {/* Row 1 */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Name
+                Date
+              </label>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleInputChange}
+                placeholder="Date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Regulation Type
               </label>
               <input
                 type="text"
-                name="name"
-                value={formData.name}
+                name="regulationType"
+                value={formData.regulationType}
                 onChange={handleInputChange}
-                placeholder="Name"
+                placeholder="Regulation Type"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
                 required
               />
@@ -115,93 +119,47 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                name="enail"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Email"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Phone
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                placeholder="Phone"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
-                required
-              />
-            </div>
-
-            {/* Row 2 */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Licence No.
+                Audit
               </label>
               <input
                 type="text"
-                name="licence"
-                value={formData.licenseNo}
+                name="audit"
+                value={formData.audit}
                 onChange={handleInputChange}
-                placeholder="Licence No."
+                placeholder="Audit"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
                 required
               />
             </div>
 
-            {/* Row 3 */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Vehicle Type
+                Violation
               </label>
-              <select
-                name="vehicleType"
-                value={formData.vehicleType}
+              <input
+                type="text"
+                name="violation"
+                value={formData.violation}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white text-gray-700"
+                placeholder="Violation"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
                 required
-              >
-                <option value="">Select Vehicle</option>
-                <option value="Van">Van</option>
-                <option value="Car">Car</option>
-                <option value="Truck">Truck</option>
-                <option value="Bike">Bike</option>
-                <option value="Bus">Bus</option>
-              </select>
+              />
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Assigned Route
+                Violation Type
               </label>
-              <select
-                name="assignedRoute"
-                value={formData.assignedRoute}
+              <input
+                type="text"
+                name="violationType"
+                value={formData.violationType}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white text-gray-700"
+                placeholder="Violation Type"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
                 required
-              >
-                <option value="">Select Assigned Route</option>
-                <option value="David M.">David M.</option>
-                <option value="Carla G.">Carla G.</option>
-                <option value="David J.">David J.</option>
-                <option value="Catrin D.">Catrin D.</option>
-                <option value="John S.">John S.</option>
-                <option value="Alice B.">Alice B.</option>
-                <option value="Michael T.">Michael T.</option>
-                <option value="Sarah L.">Sarah L.</option>
-                <option value="Emily R.">Emily R.</option>
-              </select>
+              />
             </div>
 
             <div className="space-y-2">
@@ -217,15 +175,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
               >
                 <option value="">Select Status</option>
                 <option value="Active">Active</option>
-                <option value="Off-Duty">Off-Duty</option>
-                <option value="On-Delivery">On-Delivery</option>
                 <option value="Inactive">Inactive</option>
-                <option value="Pending">Pending</option>
-                <option value="Suspended">Suspended</option>
-                <option value="Retired">Retired</option>
-                <option value="On-Hold">On-Hold</option>
-                <option value="Under Review">Under Review</option>
-                <option value="Terminated">Terminated</option>
               </select>
             </div>
           </div>
@@ -245,7 +195,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   );
 }
 
-function DriversVehicles() {
+function Compliances() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuRef = useRef(null);
@@ -279,7 +229,7 @@ function DriversVehicles() {
     setActiveDropdown(null);
   };
 
-    const handleAddNew = () => {
+  const handleAddNew = () => {
     setModalMode("add");
     setSelectedFacility(null);
     setModalOpen(true);
@@ -310,122 +260,103 @@ function DriversVehicles() {
     },
   ];
 
-  const driversData = [
+  const complianceData = [
     {
       no: 1,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Van",
-      assignedRoute: "David M.",
-      status: "Off-Duty",
+      date: "June 15, 2025",
+      regulationType: "Hipaa",
+      audit: 50,
+      violation: 50,
+      violationType: "Data Breach",
+      status: "Pending",
     },
     {
       no: 2,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Car",
-      assignedRoute: "Carla G.",
-      status: "Active",
+      date: "June 16, 2025",
+      regulationType: "GDPR",
+      audit: 30,
+      violation: 20,
+      violationType: "Data Processing",
+      status: "Pending",
     },
     {
       no: 3,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Truck",
-      assignedRoute: "David J.",
-      status: "On-Delivery",
+      date: "June 17, 2025",
+      regulationType: "PCI DSS",
+      audit: 40,
+      violation: 10,
+      violationType: "Payment Security",
+      status: "Completed",
     },
     {
       no: 4,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Van",
-      assignedRoute: "Catrin D.",
-      status: "Active",
+      date: "June 18, 2025",
+      regulationType: "SOX",
+      audit: 60,
+      violation: 15,
+      violationType: "Financial Reporting",
+      status: "Completed",
     },
     {
       no: 5,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Car",
-      assignedRoute: "David M.",
-      status: "Off-Duty",
+      date: "June 19, 2025",
+      regulationType: "FISMA",
+      audit: 70,
+      violation: 25,
+      violationType: "Information Security",
+      status: "Pending",
     },
     {
       no: 6,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Truck",
-      assignedRoute: "Carla G.",
-      status: "On-Delivery",
+      date: "June 20, 2025",
+      regulationType: "HIPAA",
+      audit: 80,
+      violation: 30,
+      violationType: "Data Privacy",
+      status: "Completed",
     },
     {
       no: 7,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Van",
-      assignedRoute: "David J.",
-      status: "Off-Duty",
+      date: "June 21, 2025",
+      regulationType: "GDPR",
+      audit: 90,
+      violation: 35,
+      violationType: "Data Protection",
+      status: "Pending",
     },
     {
       no: 8,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Car",
-      assignedRoute: "Catrin D.",
-      status: "Active",
+      date: "June 22, 2025",
+      regulationType: "PCI DSS",
+      audit: 100,
+      violation: 40,
+      violationType: "Payment Processing",
+      status: "Completed",
     },
     {
       no: 9,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Truck",
-      assignedRoute: "David M.",
-      status: "Off-Duty",
+      date: "June 23, 2025",
+      regulationType: "SOX",
+      audit: 110,
+      violation: 45,
+      violationType: "Financial Compliance",
+      status: "Pending",
     },
     {
       no: 10,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Van",
-      assignedRoute: "Carla G.",
-      status: "Active",
+      date: "June 24, 2025",
+      regulationType: "FISMA",
+      audit: 120,
+      violation: 50,
+      violationType: "Information Assurance",
+      status: "Completed",
     },
   ];
 
-  const toggleDropdown = (index) => {
-    setActiveDropdown(activeDropdown === index ? null : index);
-  };
-
-  const handleClickOutside = () => {
-    setActiveDropdown(null);
-  };
-
-  const getStatusBadge = (status) => {
+  const getStatusStyle = (status) => {
     const statusStyles = {
-      Active: "bg-green-100 text-green-800 border border-green-200",
-      "Off-Duty": "bg-red-100 text-red-800 border border-red-200",
-      "On-Delivery": "bg-blue-100 text-blue-800 border border-blue-200",
+      Completed: "bg-green-100 text-green-800 border border-green-200",
+      Pending: "bg-red-100 text-red-800 border border-red-200",
     };
 
     return (
@@ -439,22 +370,31 @@ function DriversVehicles() {
     );
   };
 
+  const toggleDropdown = (index) => {
+    setActiveDropdown(activeDropdown === index ? null : index);
+  };
+
+  const handleClickOutside = () => {
+    setActiveDropdown(null);
+  };
+
   React.useEffect(() => {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
   return (
-    <Layout title="All Drivers & Vehicles">
+    <Layout title="Compliances Report">
       {/* Main Content */}
       <div className="bg-white shadow-sm overflow-hidden rounded-lg">
         {/* Add New Button */}
         <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
           <span className="text-lg font-semibold text-gray-900">
-            All Drivers
+            All Compliances
           </span>
           <button
             onClick={handleAddNew}
+            type="button"
             className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700"
           >
             Add New
@@ -463,7 +403,7 @@ function DriversVehicles() {
 
         {/* Table with Horizontal Scroll for All Screen Sizes */}
         <DataTable
-          value={driversData}
+          value={complianceData}
           stripedRows
           tableStyle={{ minWidth: "50rem" }}
           rowClassName={() => "hover:bg-gray-50"}
@@ -482,42 +422,37 @@ function DriversVehicles() {
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="name"
-            header="Name"
+            field="date"
+            header="Date"
             bodyStyle={{
               verticalAlign: "middle",
               fontSize: "14px",
             }}
           />
           <Column
-            field="email"
-            header="Email"
+            field="regulationType"
+            header="Regulation Type"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="phone"
-            header="Phone"
+            field="audit"
+            header="Total Deliveries Audit"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="licenseNo"
-            header="License No."
+            field="violation"
+            header="Violation Detected"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="vehicleType"
-            header="Vehicle Type"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-          />
-          <Column
-            field="assignedRoute"
-            header="Assigned Route"
+            field="violationType"
+            header="Violation Type"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
             field="status"
             header="Status"
-            body={(rowData) => getStatusBadge(rowData.status)}
+            body={(rowData) => getStatusStyle(rowData.status)}
           />
           <Column
             header="Action"
@@ -564,4 +499,4 @@ function DriversVehicles() {
   );
 }
 
-export default isAuth(DriversVehicles);
+export default Compliances;

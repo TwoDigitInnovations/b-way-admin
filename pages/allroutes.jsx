@@ -1,7 +1,28 @@
-import React, { useState } from 'react';
-import { MoreHorizontal, Eye, Edit3, UserPlus, RotateCcw, Download, Menu, X, Search, Bell, ChevronDown, Clock } from 'lucide-react';
-import Sidebar from '@/components/sidebar';
-import Header from '@/components/header';
+import React, { useRef, useState } from "react";
+import {
+  MoreHorizontal,
+  Eye,
+  Edit3,
+  UserPlus,
+  RotateCcw,
+  Download,
+  X,
+  Search,
+  Bell,
+  ChevronDown,
+  Clock,
+  Delete,
+  DeleteIcon,
+  Trash,
+} from "lucide-react";
+import Sidebar from "@/components/sidebar";
+import Header from "@/components/header";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+import { Menu } from "primereact/menu";
+import Layout from "@/components/layout";
+import isAuth from "@/components/isAuth";
 
 function RoutesSchedules() {
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -9,180 +30,193 @@ function RoutesSchedules() {
   const [showModal, setShowModal] = useState(false);
   const [editingRoute, setEditingRoute] = useState(null);
   const [formData, setFormData] = useState({
-    routeName: '',
-    startAddress: '',
-    startCity: '',
-    startState: '',
-    startZipcode: '',
-    endAddress: '',
-    endCity: '',
-    endState: '',
-    endZipcode: '',
-    stops: '',
-    assignedDriver: '',
-    eta: '',
-    activeDays: '',
-    status: ''
+    routeName: "",
+    startAddress: "",
+    startCity: "",
+    startState: "",
+    startZipcode: "",
+    endAddress: "",
+    endCity: "",
+    endState: "",
+    endZipcode: "",
+    stops: "",
+    assignedDriver: "",
+    eta: "",
+    activeDays: "",
+    status: "",
   });
+  const menuRef = useRef(null);
+  const [selectedRowData, setSelectedRowData] = useState(null);
 
   const routes = [
     {
       no: 1,
-      routeName: 'Route A - North Bergen',
-      startLocation: '47 W 13th St, New York',
-      endLocation: '20 Cooper Square, New York',
-      stops: 'Jammu Hospital',
-      assignedDriver: 'David M.',
-      eta: '2:10 PM',
-      activeDays: 'Mon-Fri',
-      status: 'Archive'
+      routeName: "Route A - North Bergen",
+      startLocation: "47 W 13th St, New York",
+      endLocation: "20 Cooper Square, New York",
+      stops: "Jammu Hospital",
+      assignedDriver: "David M.",
+      eta: "2:10 PM",
+      activeDays: "Mon-Fri",
+      status: "Archive",
     },
     {
       no: 2,
-      routeName: 'Route B - North Bergen',
-      startLocation: '20 Cooper Square, New York',
-      endLocation: '47 W 13th St, New York',
-      stops: 'Capitol Hospital',
-      assignedDriver: 'Carla G.',
-      eta: '8:52 PM',
-      activeDays: 'Sat only',
-      status: 'Completed'
+      routeName: "Route B - North Bergen",
+      startLocation: "20 Cooper Square, New York",
+      endLocation: "47 W 13th St, New York",
+      stops: "Capitol Hospital",
+      assignedDriver: "Carla G.",
+      eta: "8:52 PM",
+      activeDays: "Sat only",
+      status: "Completed",
     },
     {
       no: 3,
-      routeName: 'Route C - North Bergen',
-      startLocation: '47 W 13th St, New York',
-      endLocation: '20 Cooper Square, New York',
-      stops: 'Jim Pharmacy',
-      assignedDriver: 'David J.',
-      eta: '8:52 AM',
-      activeDays: 'Mon-Fri',
-      status: 'Active'
+      routeName: "Route C - North Bergen",
+      startLocation: "47 W 13th St, New York",
+      endLocation: "20 Cooper Square, New York",
+      stops: "Jim Pharmacy",
+      assignedDriver: "David J.",
+      eta: "8:52 AM",
+      activeDays: "Mon-Fri",
+      status: "Active",
     },
     {
       no: 4,
-      routeName: 'Route D - North Bergen',
-      startLocation: '20 Cooper Square, New York',
-      endLocation: '47 W 13th St, New York',
-      stops: 'Bellevue Hospital',
-      assignedDriver: 'Catrin D.',
-      eta: '8:52 PM',
-      activeDays: 'Sat only',
-      status: 'Completed'
+      routeName: "Route D - North Bergen",
+      startLocation: "20 Cooper Square, New York",
+      endLocation: "47 W 13th St, New York",
+      stops: "Bellevue Hospital",
+      assignedDriver: "Catrin D.",
+      eta: "8:52 PM",
+      activeDays: "Sat only",
+      status: "Completed",
     },
     {
       no: 5,
-      routeName: 'Route A - North Bergen',
-      startLocation: '47 W 13th St, New York',
-      endLocation: '20 Cooper Square, New York',
-      stops: 'Oxford Hospital',
-      assignedDriver: 'David M.',
-      eta: '8:52 AM',
-      activeDays: 'Mon-Fri',
-      status: 'Archive'
+      routeName: "Route A - North Bergen",
+      startLocation: "47 W 13th St, New York",
+      endLocation: "20 Cooper Square, New York",
+      stops: "Oxford Hospital",
+      assignedDriver: "David M.",
+      eta: "8:52 AM",
+      activeDays: "Mon-Fri",
+      status: "Archive",
     },
     {
       no: 6,
-      routeName: 'Route B - North Bergen',
-      startLocation: '20 Cooper Square, New York',
-      endLocation: '47 W 13th St, New York',
-      stops: 'Carla G.',
-      assignedDriver: 'Carla G.',
-      eta: '8:52 AM',
-      activeDays: 'Sat only',
-      status: 'Active'
+      routeName: "Route B - North Bergen",
+      startLocation: "20 Cooper Square, New York",
+      endLocation: "47 W 13th St, New York",
+      stops: "Carla G.",
+      assignedDriver: "Carla G.",
+      eta: "8:52 AM",
+      activeDays: "Sat only",
+      status: "Active",
     },
     {
       no: 7,
-      routeName: 'Route C - North Bergen',
-      startLocation: '47 W 13th St, New York',
-      endLocation: '20 Cooper Square, New York',
-      stops: 'Capitol Hospital',
-      assignedDriver: 'David J.',
-      eta: '8:52 AM',
-      activeDays: 'Mon-Fri',
-      status: 'Archive'
+      routeName: "Route C - North Bergen",
+      startLocation: "47 W 13th St, New York",
+      endLocation: "20 Cooper Square, New York",
+      stops: "Capitol Hospital",
+      assignedDriver: "David J.",
+      eta: "8:52 AM",
+      activeDays: "Mon-Fri",
+      status: "Archive",
     },
     {
       no: 8,
-      routeName: 'Route D - North Bergen',
-      startLocation: '20 Cooper Square, New York',
-      endLocation: '47 W 13th St, New York',
-      stops: 'Bellevue Hospital',
-      assignedDriver: 'Catrin D.',
-      eta: '8:52 AM',
-      activeDays: 'Sat only',
-      status: 'Completed'
+      routeName: "Route D - North Bergen",
+      startLocation: "20 Cooper Square, New York",
+      endLocation: "47 W 13th St, New York",
+      stops: "Bellevue Hospital",
+      assignedDriver: "Catrin D.",
+      eta: "8:52 AM",
+      activeDays: "Sat only",
+      status: "Completed",
     },
     {
       no: 9,
-      routeName: 'Route A - North Bergen',
-      startLocation: '47 W 13th St, New York',
-      endLocation: '20 Cooper Square, New York',
-      stops: 'Jammu Hospital',
-      assignedDriver: 'David M.',
-      eta: '8:52 AM',
-      activeDays: 'Mon-Fri',
-      status: 'Archive'
+      routeName: "Route A - North Bergen",
+      startLocation: "47 W 13th St, New York",
+      endLocation: "20 Cooper Square, New York",
+      stops: "Jammu Hospital",
+      assignedDriver: "David M.",
+      eta: "8:52 AM",
+      activeDays: "Mon-Fri",
+      status: "Archive",
     },
     {
       no: 10,
-      routeName: 'Route B - North Bergen',
-      startLocation: '20 Cooper Square, New York',
-      endLocation: '47 W 13th St, New York',
-      stops: 'Oxford Hospital',
-      assignedDriver: 'Carla G.',
-      eta: '8:52 AM',
-      activeDays: 'Sat only',
-      status: 'Completed'
-    }
+      routeName: "Route B - North Bergen",
+      startLocation: "20 Cooper Square, New York",
+      endLocation: "47 W 13th St, New York",
+      stops: "Oxford Hospital",
+      assignedDriver: "Carla G.",
+      eta: "8:52 AM",
+      activeDays: "Sat only",
+      status: "Completed",
+    },
   ];
 
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
   const openAddModal = () => {
     setEditingRoute(null);
     setFormData({
-      routeName: '',
-      startAddress: '',
-      startCity: '',
-      startState: '',
-      startZipcode: '',
-      endAddress: '',
-      endCity: '',
-      endState: '',
-      endZipcode: '',
-      stops: '',
-      assignedDriver: '',
-      eta: '',
-      activeDays: '',
-      status: ''
+      routeName: "",
+      startAddress: "",
+      startCity: "",
+      startState: "",
+      startZipcode: "",
+      endAddress: "",
+      endCity: "",
+      endState: "",
+      endZipcode: "",
+      stops: "",
+      assignedDriver: "",
+      eta: "",
+      activeDays: "",
+      status: "",
     });
     setShowModal(true);
   };
 
   const openEditModal = (route) => {
     setEditingRoute(route);
+
+    // Parse start location to extract address and city
+    const startLocationParts = route.startLocation.split(",");
+    const startAddress = startLocationParts[0]?.trim() || "";
+    const startCity = startLocationParts[1]?.trim() || "";
+
+    // Parse end location to extract address and city
+    const endLocationParts = route.endLocation.split(",");
+    const endAddress = endLocationParts[0]?.trim() || "";
+    const endCity = endLocationParts[1]?.trim() || "";
+
     setFormData({
-      routeName: route.routeName,
-      startAddress: route.startLocation,
-      startCity: '',
-      startState: '',
-      startZipcode: '',
-      endAddress: route.endLocation,
-      endCity: '',
-      endState: '',
-      endZipcode: '',
-      stops: route.stops,
-      assignedDriver: route.assignedDriver,
-      eta: route.eta,
-      activeDays: route.activeDays,
-      status: route.status
+      routeName: route.routeName || "",
+      startAddress: startAddress,
+      startCity: startCity,
+      startState: startCity === "New York" ? "NY" : "",
+      startZipcode: "",
+      endAddress: endAddress,
+      endCity: endCity,
+      endState: endCity === "New York" ? "NY" : "",
+      endZipcode: "",
+      stops: route.stops || "",
+      assignedDriver: route.assignedDriver || "",
+      eta: route.eta || "",
+      activeDays: route.activeDays || "",
+      status: route.status || "",
     });
     setShowModal(true);
   };
@@ -201,140 +235,168 @@ function RoutesSchedules() {
     setActiveDropdown(null);
   };
 
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'archive':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const getStatusBadge = (status) => {
+    const statusStyles = {
+      Active: "bg-blue-100 text-blue-800 border border-blue-200",
+      Completed: "bg-green-100 text-green-800 border border-green-200",
+      Archive: "bg-red-100 text-red-800 border border-red-200",
+    };
+
+    return (
+      <span
+        className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
+          statusStyles[status] || "bg-gray-100 text-gray-800"
+        }`}
+      >
+        {status}
+      </span>
+    );
   };
 
+  const getMenuItems = (row) => [
+    {
+      label: "View",
+      icon: <Eye className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("View clicked", row);
+      },
+    },
+    {
+      label: "Edit",
+      icon: <Edit3 className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("Edit clicked", row);
+        openEditModal(row);
+      },
+    },
+    {
+      label: "Delete",
+      icon: <Trash className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("Delete clicked", row);
+      },
+    },
+  ];
+
   React.useEffect(() => {
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out lg:w-64`}>
-        <Sidebar />
-      </div>
-      
-      {/* Sidebar Overlay for mobile */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+    <Layout title="All Routes & Schedules">
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 w-full lg:w-auto">
-        <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} title="All Routes & Schedules" />
-        <div className="p-3 sm:p-4 lg:p-6">
-          <div className="bg-white shadow-sm overflow-hidden">
-            
-            {/* Add New Button */}
-            <div className="px-4 py-3 border-b border-gray-200 flex justify-end">
-              <button 
-                onClick={openAddModal}
-                className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700"
-              >
-                Add New
-              </button>
-            </div>
-            
-            {/* Table with Horizontal Scroll for All Screen Sizes */}
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1000px]">
-                <thead className="bg-[#003C72] text-white">
-                  <tr>
-                    <th className="w-12 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">No.</th>
-                    <th className="w-40 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">Route Name</th>
-                    <th className="w-40 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">Start Location</th>
-                    <th className="w-40 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">End Location</th>
-                    <th className="w-32 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">Stops</th>
-                    <th className="w-32 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">Assigned Driver</th>
-                    <th className="w-20 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">ETA</th>
-                    <th className="w-24 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">Active Days</th>
-                    <th className="w-24 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
-                    <th className="w-16 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {routes.map((route, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-2 py-2 text-sm text-gray-900 truncate">{route.no}</td>
-                      <td className="px-2 py-2 text-sm text-orange-500 font-medium truncate">{route.routeName}</td>
-                      <td className="px-2 py-2 text-sm text-gray-900 truncate" title={route.startLocation}>{route.startLocation}</td>
-                      <td className="px-2 py-2 text-sm text-gray-900 truncate" title={route.endLocation}>{route.endLocation}</td>
-                      <td className="px-2 py-2 text-sm text-gray-900 truncate">{route.stops}</td>
-                      <td className="px-2 py-2 text-sm text-gray-900 truncate">{route.assignedDriver}</td>
-                      <td className="px-2 py-2 text-sm text-gray-900 truncate">{route.eta}</td>
-                      <td className="px-2 py-2 text-sm text-gray-900 truncate">{route.activeDays}</td>
-                      <td className="px-2 py-2 text-sm">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(route.status)}`}>
-                          {route.status}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-sm relative">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleDropdown(index);
-                          }}
-                          className="p-1 rounded hover:bg-gray-100 focus:outline-none"
-                        >
-                          <MoreHorizontal className="w-5 h-5 text-gray-500" />
-                        </button>
-                        
-                        {activeDropdown === index && (
-                          <div className="absolute right-0 top-8 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10">
-                            <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-                              <Eye className="w-4 h-4 mr-2" />
-                              View
-                            </button>
-                            <button 
-                              onClick={() => {
-                                openEditModal(route);
-                                setActiveDropdown(null);
-                              }}
-                              className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100"
-                            >
-                              <Edit3 className="w-4 h-4 mr-2" />
-                              Edit
-                            </button>
-                            <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-                              <UserPlus className="w-4 h-4 mr-2" />
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-center space-x-2">
-              <button className="bg-orange-500 text-white px-3 py-1 rounded text-sm font-medium">1</button>
-              <button className="text-gray-500 hover:text-gray-700 px-3 py-1 rounded text-sm">2</button>
-              <button className="text-gray-500 hover:text-gray-700 px-3 py-1 rounded text-sm">3</button>
-              <span className="text-gray-500 px-2">...</span>
-              <button className="text-gray-500 hover:text-gray-700 px-3 py-1 rounded text-sm">10</button>
-              <button className="text-gray-500 hover:text-gray-700 px-3 py-1 rounded text-sm">Next</button>
-            </div>
-          </div>
+      <div className="bg-white shadow-sm overflow-hidden rounded-lg">
+        {/* Add New Button */}
+        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+           <span className="text-lg font-semibold text-gray-900">
+            All Routes
+          </span>
+          <button
+            onClick={openAddModal}
+            className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700"
+          >
+            Add New
+          </button>
         </div>
+
+        {/* Table with Horizontal Scroll for All Screen Sizes */}
+        <DataTable
+          value={routes}
+          stripedRows
+          tableStyle={{ minWidth: "50rem" }}
+          rowClassName={() => "hover:bg-gray-50"}
+          size="small"
+          // style={{ overflow: "visible" }}
+          // scrollable={false}
+          // columnResizeMode="expand"
+          // resizableColumns
+          paginator
+          rows={10}
+          // rowsPerPageOptions={[5, 10, 25, 50]}
+        >
+          <Column
+            field="no"
+            header="No."
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="routeName"
+            header="Route Name"
+            bodyStyle={{
+              color: "#F97316",
+              verticalAlign: "middle",
+              fontSize: "14px",
+            }}
+          />
+          <Column
+            field="startLocation"
+            header="Start Location"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="endLocation"
+            header="End Location"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="stops"
+            header="Stops"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="assignedDriver"
+            header="Assigned Driver"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="eta"
+            header="ETA"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="activeDays"
+            header="Active Days"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="status"
+            header="Status"
+            body={(rowData) => getStatusBadge(rowData.status)}
+          />
+          <Column
+            header="Action"
+            bodyStyle={{
+              verticalAlign: "middle",
+              textAlign: "center",
+              overflow: "visible",
+              position: "relative",
+            }}
+            body={(rowData, options) => (
+              <div className="relative flex justify-center">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setSelectedRowData(rowData);
+                    menuRef.current.toggle(event);
+                  }}
+                  className="p-1 rounded hover:bg-gray-100 focus:outline-none"
+                >
+                  <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            )}
+          />
+        </DataTable>
       </div>
+      <Menu
+        model={selectedRowData ? getMenuItems(selectedRowData) : []}
+        popup
+        ref={menuRef}
+        id="popup_menu"
+      />
 
       {/* Modal */}
       {showModal && (
@@ -343,10 +405,14 @@ function RoutesSchedules() {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-[#003C72]">
-                {editingRoute ? 'Edit Routes & Schedules' : 'Add Routes & Schedules'}
+                {editingRoute
+                  ? "Edit Routes & Schedules"
+                  : "Add Routes & Schedules"}
               </h2>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-6 h-6" />
@@ -366,7 +432,7 @@ function RoutesSchedules() {
                   value={formData.routeName}
                   onChange={handleInputChange}
                   placeholder="Route Name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                 />
               </div>
 
@@ -383,7 +449,7 @@ function RoutesSchedules() {
                       value={formData.startAddress}
                       onChange={handleInputChange}
                       placeholder="Address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                     />
                   </div>
                   <div>
@@ -391,7 +457,7 @@ function RoutesSchedules() {
                       name="startCity"
                       value={formData.startCity}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                     >
                       <option value="">Select City</option>
                       <option value="New York">New York</option>
@@ -404,7 +470,7 @@ function RoutesSchedules() {
                       name="startState"
                       value={formData.startState}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                     >
                       <option value="">Select State</option>
                       <option value="NY">New York</option>
@@ -419,7 +485,7 @@ function RoutesSchedules() {
                       value={formData.startZipcode}
                       onChange={handleInputChange}
                       placeholder="Zipcode"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                     />
                   </div>
                 </div>
@@ -438,7 +504,7 @@ function RoutesSchedules() {
                       value={formData.endAddress}
                       onChange={handleInputChange}
                       placeholder="Address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                     />
                   </div>
                   <div>
@@ -446,7 +512,7 @@ function RoutesSchedules() {
                       name="endCity"
                       value={formData.endCity}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                     >
                       <option value="">Select City</option>
                       <option value="New York">New York</option>
@@ -459,7 +525,7 @@ function RoutesSchedules() {
                       name="endState"
                       value={formData.endState}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                     >
                       <option value="">Select State</option>
                       <option value="NY">New York</option>
@@ -474,7 +540,7 @@ function RoutesSchedules() {
                       value={formData.endZipcode}
                       onChange={handleInputChange}
                       placeholder="Zipcode"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                     />
                   </div>
                 </div>
@@ -491,7 +557,7 @@ function RoutesSchedules() {
                     name="stops"
                     value={formData.stops}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                   >
                     <option value="">Select Stops</option>
                     <option value="Jammu Hospital">Jammu Hospital</option>
@@ -511,7 +577,7 @@ function RoutesSchedules() {
                     name="assignedDriver"
                     value={formData.assignedDriver}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                   >
                     <option value="">Select Assigned Driver</option>
                     <option value="David M.">David M.</option>
@@ -548,7 +614,7 @@ function RoutesSchedules() {
                     name="activeDays"
                     value={formData.activeDays}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                   >
                     <option value="">Select Active Days</option>
                     <option value="Mon-Fri">Mon-Fri</option>
@@ -567,7 +633,7 @@ function RoutesSchedules() {
                     name="status"
                     value={formData.status}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                   >
                     <option value="">Select Status</option>
                     <option value="Active">Active</option>
@@ -581,7 +647,7 @@ function RoutesSchedules() {
               <div className="flex justify-end pt-6">
                 <button
                   type="submit"
-                  className="bg-orange-500 text-white px-6 py-2 rounded-md font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                  className="bg-secondary text-white px-6 py-2 rounded-md font-medium hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2"
                 >
                   Submit
                 </button>
@@ -590,8 +656,8 @@ function RoutesSchedules() {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 }
 
-export default RoutesSchedules;
+export default isAuth(RoutesSchedules);

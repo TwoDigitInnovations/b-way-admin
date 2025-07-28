@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   MoreHorizontal,
   Eye,
@@ -6,7 +6,7 @@ import {
   UserPlus,
   RotateCcw,
   Download,
-  Menu,
+  // Menu,
   X,
   Search,
   Bell,
@@ -16,19 +16,83 @@ import {
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
 import Layout from "@/components/layout";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
 import { Button } from "primereact/button";
+import { Menu } from "primereact/menu";
+import { Api } from "@/helper/service";
+import { useRouter } from "next/router";
 
-function Orders() {
+function Orders({ loader }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const menuRef = useRef(null);
+  const [selectedRowData, setSelectedRowData] = useState(null);
+  const [orders, setOrders] = useState([]);
+  // Pagination
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit] = useState(10);
+  const router = useRouter();
 
-  const toggleDropdown = (index) => {
-    setActiveDropdown(activeDropdown === index ? null : index);
+  const getMenuItems = (order) => [
+    {
+      label: "View",
+      icon: <Eye className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("View clicked", order);
+      },
+    },
+    {
+      label: "Edit",
+      icon: <Edit3 className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("Edit clicked", order);
+        handleEditClick(order);
+      },
+    },
+    {
+      label: "Assign",
+      icon: <UserPlus className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("Assign clicked", order);
+      },
+    },
+    {
+      label: "Create Return",
+      icon: <RotateCcw className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("Create Return clicked", order);
+      },
+    },
+    {
+      label: "Download Return Load",
+      icon: <Download className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("Download Return Load clicked", order);
+      },
+    },
+  ];
+
+  const toggleDropdown = (index, event) => {
+    if (activeDropdown === index) {
+      setActiveDropdown(null);
+    } else {
+      if (event) {
+        const rect = event.target.getBoundingClientRect();
+        setDropdownPosition({
+          x: rect.right - 192, // 192px = width of dropdown (w-48)
+          y: rect.bottom + 8,
+        });
+      }
+      setActiveDropdown(index);
+    }
   };
 
-  const orders = [
+  const tempOrders = [
     {
       no: 1,
       orderId: "ORD-20943",
@@ -149,12 +213,65 @@ function Orders() {
       status: "Delivered",
       eta: "8:52 AM",
     },
+    {
+      no: 11,
+      orderId: "ORD-56545",
+      items: "IV Adventure - Alok",
+      qty: 36,
+      pickupLocation: "20 Cooper Square, New York",
+      deliveryLocation: "47 W 13th St, New York",
+      assignedDriver: "Carla G.",
+      route: "David J.",
+      status: "Delivered",
+      eta: "8:52 AM",
+    },
   ];
 
   const handleEditClick = (order) => {
     setSelectedOrder(order);
     setShowEditModal(true);
     setActiveDropdown(null);
+  };
+
+  const handleClickOutside = (event) => {
+    if (!event.target.closest(".dropdown-menu")) {
+      setActiveDropdown(null);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      loader(true);
+      try {
+        const response = await Api(
+          "GET",
+          `/order?page=${currentPage}&limit=${limit}`,
+          null,
+          router
+        );
+
+        if (response.status) {
+          setOrders(response.data);
+          setTotalOrders(response.totalOrders);
+          setCurrentPage(response.currentPage);
+        }
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      } finally {
+        loader(false);
+      }
+    };
+
+    fetchOrders();
+  }, [currentPage, limit]);
+
+  const handlePageChange = (event) => {
+    setCurrentPage(event.page + 1);
   };
 
   const getStatusBadge = (status) => {
@@ -166,6 +283,7 @@ function Orders() {
       "Return Created": "bg-teal-100 text-teal-800 border border-teal-200",
       "Invoice Generated": "bg-green-100 text-green-800  border-green-800",
     };
+
     return (
       <span
         className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
@@ -177,142 +295,116 @@ function Orders() {
     );
   };
 
-  const handleClickOutside = () => {
-    setActiveDropdown(null);
-  };
-
-  React.useEffect(() => {
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, []);
-
   return (
     <Layout title="Orders">
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        {/* Table with Horizontal Scroll for All Screen Sizes */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead className="bg-blue-900 text-white">
-              <tr>
-                <th className="w-12 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  No.
-                </th>
-                <th className="w-24 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  Order ID
-                </th>
-                <th className="w-40 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  Item(s)
-                </th>
-                <th className="w-16 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  Qty
-                </th>
-                <th className="w-32 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  Pickup Location
-                </th>
-                <th className="w-32 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  Delivery Location
-                </th>
-                <th className="w-24 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  Assigned Driver
-                </th>
-                <th className="w-24 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  Route
-                </th>
-                <th className="w-20 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="w-20 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  ETA
-                </th>
-                <th className="w-16 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {orders.map((order, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                    {order.no}
-                  </td>
-                  <td className="px-2 py-2 text-sm text-orange-500 font-medium truncate">
-                    {order.orderId}
-                  </td>
-                  <td
-                    className="px-2 py-2 text-sm text-gray-900 truncate"
-                    title={order.items}
-                  >
-                    {order.items}
-                  </td>
-                  <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                    {order.qty}
-                  </td>
-                  <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                    {order.pickupLocation}
-                  </td>
-                  <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                    {order.deliveryLocation}
-                  </td>
-                  <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                    {order.assignedDriver}
-                  </td>
-                  <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                    {order.route}
-                  </td>
-                  <td className="px-2 py-2 text-sm">
-                    {getStatusBadge(order.status)}
-                  </td>
-                  <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                    {order.eta}
-                  </td>
-                  <td className="px-2 py-2 text-sm relative">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleDropdown(index);
-                      }}
-                      className="p-1 rounded hover:bg-gray-100 focus:outline-none"
-                    >
-                      <MoreHorizontal className="w-5 h-5 text-gray-500" />
-                    </button>
-
-                    {activeDropdown === index && (
-                      <div className="absolute right-0 top-8 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10">
-                        <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View
-                        </button>
-                        <button
-                          onClick={() => handleEditClick(order)}
-                          className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100"
-                        >
-                          <Edit3 className="w-4 h-4 mr-2" />
-                          Edit
-                        </button>
-                        <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Assign
-                        </button>
-                        <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-                          <RotateCcw className="w-4 h-4 mr-2" />
-                          Create Return
-                        </button>
-                        <button className="flex items-center w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-100">
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Return Load
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="bg-white shadow-sm overflow-hidden rounded-lg">
+        <div className="px-4 py-4 border-b border-gray-200 flex justify-between items-center">
+          <span className="text-lg font-semibold text-gray-900">
+            All Orders
+          </span>
+          {/* <button className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700">
+            Add New
+          </button> */}
         </div>
+        <DataTable
+          value={orders}
+          stripedRows
+          tableStyle={{ minWidth: "50rem" }}
+          rowClassName={() => "hover:bg-gray-50"}
+          size="small"
+          paginator
+          rows={limit}
+          totalRecords={totalOrders}
+          first={(currentPage - 1) * limit}
+          lazy
+          onPage={handlePageChange}
+        >
+          <Column
+            field="index"
+            header="No."
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="orderId"
+            header="Order ID"
+            bodyStyle={{
+              color: "#F97316",
+              fontWeight: 500,
+              verticalAlign: "middle",
+              fontSize: "14px",
+            }}
+          />
+          <Column
+            field="items"
+            header="Item(s)"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="qty"
+            header="Qty"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="pickupLocation"
+            header="Pickup Location"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="deliveryLocation"
+            header="Delivery Location"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="assignedDriver"
+            header="Assigned Driver"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => <span>{rowData?.assignedDriver?.name}</span>}
+          />
+          <Column
+            field="route"
+            header="Route"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="status"
+            header="Status"
+            body={(rowData) => getStatusBadge(rowData.status)}
+          />
+          <Column
+            field="eta"
+            header="ETA"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            header="Action"
+            bodyStyle={{
+              verticalAlign: "middle",
+              textAlign: "center",
+              overflow: "visible",
+              position: "relative",
+            }}
+            body={(rowData, options) => (
+              <div className="relative flex justify-center">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setSelectedRowData(rowData);
+                    menuRef.current.toggle(event);
+                  }}
+                  className="p-1 rounded hover:bg-gray-100 focus:outline-none"
+                >
+                  <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            )}
+          />
+        </DataTable>
 
         {/* Pagination */}
-        <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-center space-x-2">
-          <button className="bg-orange-500 text-white px-3 py-1 rounded text-sm font-medium">
+        {/* <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-center space-x-2">
+          <button className="bg-secondary text-white px-3 py-1 rounded text-sm font-medium">
             1
           </button>
           <button className="text-gray-500 hover:text-gray-700 px-3 py-1 rounded text-sm">
@@ -328,8 +420,14 @@ function Orders() {
           <button className="text-gray-500 hover:text-gray-700 px-3 py-1 rounded text-sm">
             Next
           </button>
-        </div>
+        </div> */}
       </div>
+      <Menu
+        model={selectedRowData ? getMenuItems(selectedRowData) : []}
+        popup
+        ref={menuRef}
+        id="popup_menu"
+      />
 
       {/* Edit Order Modal */}
       {showEditModal && (
@@ -356,7 +454,7 @@ function Orders() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Item(S)
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                     <option>Select Item(S)</option>
                     <option selected>{selectedOrder?.items}</option>
                   </select>
@@ -369,14 +467,14 @@ function Orders() {
                     type="number"
                     defaultValue={selectedOrder?.qty}
                     placeholder="Qty"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Route
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                     <option>Select Route</option>
                     <option selected>{selectedOrder?.route}</option>
                   </select>
@@ -397,14 +495,14 @@ function Orders() {
                       type="text"
                       defaultValue={selectedOrder?.pickupLocation}
                       placeholder="Address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       City
                     </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                       <option>Select City</option>
                       <option selected>New York</option>
                     </select>
@@ -413,7 +511,7 @@ function Orders() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       State
                     </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                       <option>Select State</option>
                       <option selected>NY</option>
                     </select>
@@ -425,7 +523,7 @@ function Orders() {
                     <input
                       type="text"
                       placeholder="Zipcode"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                     />
                   </div>
                 </div>
@@ -445,14 +543,14 @@ function Orders() {
                       type="text"
                       defaultValue={selectedOrder?.deliveryLocation}
                       placeholder="Address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       City
                     </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                       <option>Select City</option>
                       <option selected>New York</option>
                     </select>
@@ -461,7 +559,7 @@ function Orders() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       State
                     </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                       <option>Select State</option>
                       <option selected>NY</option>
                     </select>
@@ -473,7 +571,7 @@ function Orders() {
                     <input
                       type="text"
                       placeholder="Zipcode"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                     />
                   </div>
                 </div>
@@ -485,7 +583,7 @@ function Orders() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Assigned Driver
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                     <option>Select Assigned Driver</option>
                     <option selected>{selectedOrder?.assignedDriver}</option>
                   </select>
@@ -508,7 +606,7 @@ function Orders() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Status
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
+                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                     <option>Select Status</option>
                     <option selected={selectedOrder?.status === "Cancelled"}>
                       Cancelled
@@ -538,7 +636,7 @@ function Orders() {
 
               {/* Submit Button */}
               <div className="flex justify-start">
-                <button className="bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-colors">
+                <button className="bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors">
                   Submit
                 </button>
               </div>

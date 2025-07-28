@@ -7,6 +7,7 @@ import { Formik } from "formik";
 import * as Yup from "yup";
 import toast from "react-hot-toast";
 import { userContext } from "./_app";
+import Cookies from "js-cookie";
 
 export default function BWayLoginPage({ loader }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -42,9 +43,11 @@ export default function BWayLoginPage({ loader }) {
       .then((res) => {
         if (res?.status) {
           localStorage.setItem("token", res.data.token);
+          Cookies.set("token", res.data.token);
           localStorage.setItem("userDetail", JSON.stringify(res.data.user));
           setUser(res.data.user); // Update user context
-          router.push("/dashboardv");
+          // router.push(res.data.user?.role === "ADMIN" ? "/dashboardv" : "/dashboard");
+          router.push("/dashboardv")
           toast.success("Login successful!");
           console.log("Login successful:", res);
         }
@@ -66,7 +69,7 @@ export default function BWayLoginPage({ loader }) {
         <div className="max-w-md w-full space-y-6">
           {/* Logo - Centered */}
           <div className="flex items-center justify-center">
-            <Image src="/images/Logo.png" width={180} height={180} />
+            <Image src="/images/Logo.png" width={180} height={180} alt="img" />
           </div>
 
           {/* Sign In Form */}
@@ -104,7 +107,7 @@ export default function BWayLoginPage({ loader }) {
                         className={`w-full pl-11 pr-4 py-3.5 border ${
                           errors.email && touched.email
                             ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                            : "border-gray-500 focus:ring-orange-500 focus:border-orange-500"
+                            : "border-gray-500 focus:ring-secondary focus:border-secondary"
                         } outline-none transition-all duration-200 text-gray-900 placeholder-gray-500`}
                       />
                     </div>
@@ -129,7 +132,7 @@ export default function BWayLoginPage({ loader }) {
                         className={`w-full pl-11 pr-12 py-3.5 border ${
                           errors.password && touched.password
                             ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                            : "border-gray-500 focus:ring-orange-500 focus:border-orange-500"
+                            : "border-gray-500 focus:ring-secondary focus:border-secondary"
                         } outline-none transition-all duration-200 text-gray-900 placeholder-gray-500`}
                       />
                       <button
@@ -160,7 +163,7 @@ export default function BWayLoginPage({ loader }) {
                         type="checkbox"
                         checked={values.rememberMe}
                         onChange={handleChange}
-                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 cursor-pointer"
+                        className="h-4 w-4 text-secondary focus:ring-secondary border-gray-300 cursor-pointer"
                       />
                       <label
                         htmlFor="remember-me"
@@ -172,7 +175,7 @@ export default function BWayLoginPage({ loader }) {
                     <div className="text-sm">
                       <a
                         href="#"
-                        className="text-gray-600 hover:text-orange-600 transition-colors"
+                        className="text-gray-600 hover:text-secondary transition-colors"
                       >
                         Forgot Password?
                       </a>

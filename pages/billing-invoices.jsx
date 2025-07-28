@@ -11,51 +11,55 @@ import {
   Bell,
   ChevronDown,
   Trash,
-  Clock,
-  Plus,
-  Check,
 } from "lucide-react";
-import Sidebar from "@/components/sidebar";
-import Header from "@/components/header";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
-import isAuth from "@/components/isAuth";
+import Payout from "@/components/Payout";
 
 function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
+    hospitalName: "",
+    contactPerson: "",
     phone: "",
-    licenseNo: "",
-    vehicleType: "",
+    address: "",
+    city: "",
+    state: "",
+    zipcode: "",
     assignedRoute: "",
-    status: "",
+    deliveryWindow: "",
+    type: "",
   });
 
   useEffect(() => {
     if (mode === "edit" && facility) {
       setFormData({
-        name: facility.name || "",
-        email: facility.email || "",
+        hospitalName: facility.hospitalName || "",
+        contactPerson: facility.contactPerson || "",
         phone: facility.phone || "",
-        licenseNo: facility.licenseNo || "",
-        vehicleType: facility.vehicleType || "",
+        address: facility.address || "",
+        city: "",
+        state: "",
+        zipcode: "",
         assignedRoute: facility.assignedRoute || "",
-        status: facility.status || "",
+        deliveryWindow: facility.deliveryWindow || "",
+        type: facility.type || "",
       });
     } else {
       // Reset form for add mode
       setFormData({
-        name: "",
-        email: "",
+        hospitalName: "",
+        contactPerson: "",
         phone: "",
-        licenseNo: "",
-        vehicleType: "",
+        address: "",
+        city: "",
+        state: "",
+        zipcode: "",
         assignedRoute: "",
-        status: "",
+        deliveryWindow: "",
+        type: "",
       });
     }
   }, [mode, facility, isOpen]);
@@ -77,14 +81,14 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 bg-opavehicleType-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-[#003C72]">
             {mode === "add"
-              ? "Add Drivers & Vehicles"
-              : "Edit Drivers & Vehicles"}
+              ? "Add Billing & Invoice"
+              : "Edit Billing & Invoice"}
           </h2>
           <button
             onClick={onClose}
@@ -100,27 +104,32 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
             {/* Row 1 */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Name
+                Hospital
               </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
+               <select
+                name="vehicle"
+                value={formData.city}
                 onChange={handleInputChange}
-                placeholder="Name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white text-gray-700"
                 required
-              />
+              >
+                <option value="">Select Vehicle</option>
+                <option value="New York">New York</option>
+                <option value="Los Angeles">Los Angeles</option>
+                <option value="Chicago">Chicago</option>
+                <option value="Houston">Houston</option>
+                <option value="Phoenix">Phoenix</option>
+              </select>
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Email
+                Courier
               </label>
               <input
                 type="email"
                 name="enail"
-                value={formData.email}
+                value={formData.contactPerson}
                 onChange={handleInputChange}
                 placeholder="Email"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
@@ -130,7 +139,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Phone
+                Amount
               </label>
               <input
                 type="tel"
@@ -146,14 +155,14 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
             {/* Row 2 */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Licence No.
+                Invoice Date
               </label>
               <input
-                type="text"
-                name="licence"
-                value={formData.licenseNo}
+                type="date"
+                name="invoiceDate"
+                value={formData.invoiceDate}
                 onChange={handleInputChange}
-                placeholder="Licence No."
+                placeholder="Invoice Date"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
                 required
               />
@@ -162,46 +171,17 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
             {/* Row 3 */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
-                Vehicle Type
+                Due Date
               </label>
-              <select
-                name="vehicleType"
-                value={formData.vehicleType}
+              <input
+                type="date"
+                name="invoiceDate"
+                value={formData.invoiceDate}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white text-gray-700"
+                placeholder="Invoice Date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
                 required
-              >
-                <option value="">Select Vehicle</option>
-                <option value="Van">Van</option>
-                <option value="Car">Car</option>
-                <option value="Truck">Truck</option>
-                <option value="Bike">Bike</option>
-                <option value="Bus">Bus</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Assigned Route
-              </label>
-              <select
-                name="assignedRoute"
-                value={formData.assignedRoute}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white text-gray-700"
-                required
-              >
-                <option value="">Select Assigned Route</option>
-                <option value="David M.">David M.</option>
-                <option value="Carla G.">Carla G.</option>
-                <option value="David J.">David J.</option>
-                <option value="Catrin D.">Catrin D.</option>
-                <option value="John S.">John S.</option>
-                <option value="Alice B.">Alice B.</option>
-                <option value="Michael T.">Michael T.</option>
-                <option value="Sarah L.">Sarah L.</option>
-                <option value="Emily R.">Emily R.</option>
-              </select>
+              />
             </div>
 
             <div className="space-y-2">
@@ -216,18 +196,14 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 required
               >
                 <option value="">Select Status</option>
-                <option value="Active">Active</option>
-                <option value="Off-Duty">Off-Duty</option>
-                <option value="On-Delivery">On-Delivery</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Pending">Pending</option>
-                <option value="Suspended">Suspended</option>
-                <option value="Retired">Retired</option>
-                <option value="On-Hold">On-Hold</option>
-                <option value="Under Review">Under Review</option>
-                <option value="Terminated">Terminated</option>
+                <option value="NY">New York</option>
+                <option value="CA">California</option>
+                <option value="IL">Illinois</option>
+                <option value="TX">Texas</option>
+                <option value="AZ">Arizona</option>
               </select>
             </div>
+
           </div>
 
           {/* Submit Button */}
@@ -245,11 +221,12 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   );
 }
 
-function DriversVehicles() {
+export default function BillingInvoices() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuRef = useRef(null);
   const [selectedRowData, setSelectedRowData] = useState(null);
+  const [activeTab, setActiveTab] = useState("invoice");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add");
   const [selectedFacility, setSelectedFacility] = useState(null);
@@ -271,7 +248,6 @@ function DriversVehicles() {
       // );
     }
   };
-
   const handleEdit = (facility) => {
     setModalMode("edit");
     setSelectedFacility(facility);
@@ -297,7 +273,6 @@ function DriversVehicles() {
       label: "Edit",
       icon: <Edit3 className="w-5 h-5 text-gray-500" />,
       command: () => {
-        console.log("Edit clicked", row);
         handleEdit(row);
       },
     },
@@ -310,122 +285,105 @@ function DriversVehicles() {
     },
   ];
 
-  const driversData = [
+  const billingData = [
     {
       no: 1,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Van",
-      assignedRoute: "David M.",
-      status: "Off-Duty",
+      hospitalName: "Jammu Hospital",
+      courier: "#COU-0000438756673",
+      invoiceDate: "June 15, 2025",
+      dueDate: "July 5, 2025",
+      amount: 220,
+      status: "Unpaid",
     },
     {
       no: 2,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Car",
-      assignedRoute: "Carla G.",
-      status: "Active",
+      hospitalName: "Chennai Hospital",
+      courier: "#COU-0000438756674",
+      invoiceDate: "June 16, 2025",
+      dueDate: "July 6, 2025",
+      amount: 150,
+      status: "Paid",
     },
     {
       no: 3,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Truck",
-      assignedRoute: "David J.",
-      status: "On-Delivery",
+      hospitalName: "Oslo Hospital",
+      courier: "#COU-0000438756675",
+      invoiceDate: "June 17, 2025",
+      dueDate: "July 7, 2025",
+      amount: 300,
+      status: "Paid",
     },
     {
       no: 4,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Van",
-      assignedRoute: "Catrin D.",
-      status: "Active",
+      hospitalName: "Berlin Hospital",
+      courier: "#COU-0000438756676",
+      invoiceDate: "June 18, 2025",
+      dueDate: "July 8, 2025",
+      amount: 400,
+      status: "Paid",
     },
     {
       no: 5,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Car",
-      assignedRoute: "David M.",
-      status: "Off-Duty",
+      hospitalName: "New York Hospital",
+      courier: "#COU-0000438756677",
+      invoiceDate: "June 19, 2025",
+      dueDate: "July 9, 2025",
+      amount: 700,
+      status: "Unpaid",
     },
     {
       no: 6,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Truck",
-      assignedRoute: "Carla G.",
-      status: "On-Delivery",
+      hospitalName: "Oslo Hospital",
+      courier: "#COU-0000438756678",
+      invoiceDate: "June 20, 2025",
+      dueDate: "July 10, 2025",
+      amount: 800,
+      status: "Paid",
     },
     {
       no: 7,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Van",
-      assignedRoute: "David J.",
-      status: "Off-Duty",
+      hospitalName: "Oslo Hospital",
+      courier: "#COU-0000438756679",
+      invoiceDate: "June 21, 2025",
+      dueDate: "July 11, 2025",
+      amount: 900,
+      status: "Partially Paid",
     },
     {
       no: 8,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Car",
-      assignedRoute: "Catrin D.",
-      status: "Active",
+      hospitalName: "Oslo Hospital",
+      courier: "#COU-0000438756680",
+      invoiceDate: "June 22, 2025",
+      dueDate: "July 12, 2025",
+      amount: 100,
+      status: "Partially Paid",
     },
     {
       no: 9,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Truck",
-      assignedRoute: "David M.",
-      status: "Off-Duty",
+      hospitalName: "Oslo Hospital",
+      courier: "#COU-0000438756681",
+      invoiceDate: "June 23, 2025",
+      dueDate: "July 13, 2025",
+      amount: 110,
+      status: "Unpaid",
     },
     {
       no: 10,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      licenseNo: "000-000-0000",
-      vehicleType: "Van",
-      assignedRoute: "Carla G.",
-      status: "Active",
+      hospitalName: "Oslo Hospital",
+      courier: "#COU-0000438756682",
+      invoiceDate: "June 24, 2025",
+      dueDate: "July 14, 2025",
+      amount: 120,
+      status: "Paid",
     },
   ];
 
-  const toggleDropdown = (index) => {
-    setActiveDropdown(activeDropdown === index ? null : index);
-  };
-
-  const handleClickOutside = () => {
-    setActiveDropdown(null);
-  };
-
-  const getStatusBadge = (status) => {
+  const getStatusStyle = (status) => {
     const statusStyles = {
-      Active: "bg-green-100 text-green-800 border border-green-200",
-      "Off-Duty": "bg-red-100 text-red-800 border border-red-200",
-      "On-Delivery": "bg-blue-100 text-blue-800 border border-blue-200",
+      Paid: "bg-green-100 text-green-800 border border-green-200",
+      Unpaid: "bg-red-100 text-red-800 border border-red-200",
+      "Partially Paid":
+        "bg-yellow-100 text-yellow-800 border border-yellow-200",
     };
 
     return (
@@ -439,20 +397,47 @@ function DriversVehicles() {
     );
   };
 
+  const toggleDropdown = (index) => {
+    setActiveDropdown(activeDropdown === index ? null : index);
+  };
+
+  const handleClickOutside = () => {
+    setActiveDropdown(null);
+  };
+
   React.useEffect(() => {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
   return (
-    <Layout title="All Drivers & Vehicles">
+    <Layout title="Billing & Invoices">
       {/* Main Content */}
       <div className="bg-white shadow-sm overflow-hidden rounded-lg">
         {/* Add New Button */}
         <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-          <span className="text-lg font-semibold text-gray-900">
-            All Drivers
-          </span>
+          <div className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab("invoice")}
+              className={`text-base lg:text-lg font-bold pb-2 border-b-2 transition-colors cursor-pointer ${
+                activeTab === "invoice"
+                  ? "text-[#003C72] border-[#003C72]"
+                  : "text-gray-500 border-transparent hover:text-gray-700"
+              }`}
+            >
+              All Billing & Invoices
+            </button>
+            <button
+              onClick={() => setActiveTab("driver")}
+              className={`text-base lg:text-lg font-bold pb-2 border-b-2 transition-colors cursor-pointer ${
+                activeTab === "driver"
+                  ? "text-[#003C72] border-[#003C72]"
+                  : "text-gray-500 border-transparent hover:text-gray-700"
+              }`}
+            >
+              Driver Payouts
+            </button>
+          </div>
           <button
             onClick={handleAddNew}
             className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700"
@@ -462,8 +447,8 @@ function DriversVehicles() {
         </div>
 
         {/* Table with Horizontal Scroll for All Screen Sizes */}
-        <DataTable
-          value={driversData}
+        {activeTab === "invoice" ? (<DataTable
+          value={billingData}
           stripedRows
           tableStyle={{ minWidth: "50rem" }}
           rowClassName={() => "hover:bg-gray-50"}
@@ -482,42 +467,37 @@ function DriversVehicles() {
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="name"
-            header="Name"
+            field="hospitalName"
+            header="Hospital Name"
             bodyStyle={{
               verticalAlign: "middle",
               fontSize: "14px",
             }}
           />
           <Column
-            field="email"
-            header="Email"
+            field="courier"
+            header="Courier"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="phone"
-            header="Phone"
+            field="invoiceDate"
+            header="Invoice Date"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="licenseNo"
-            header="License No."
+            field="dueDate"
+            header="Due Date"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="vehicleType"
-            header="Vehicle Type"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-          />
-          <Column
-            field="assignedRoute"
-            header="Assigned Route"
+            field="amount"
+            header="Amount"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
             field="status"
             header="Status"
-            body={(rowData) => getStatusBadge(rowData.status)}
+            body={(rowData) => getStatusStyle(rowData.status)}
           />
           <Column
             header="Action"
@@ -544,7 +524,7 @@ function DriversVehicles() {
               </div>
             )}
           />
-        </DataTable>
+        </DataTable>) : <Payout />}
       </div>
       <Menu
         model={selectedRowData ? getMenuItems(selectedRowData) : []}
@@ -563,5 +543,3 @@ function DriversVehicles() {
     </Layout>
   );
 }
-
-export default isAuth(DriversVehicles);

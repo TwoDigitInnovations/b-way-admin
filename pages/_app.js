@@ -1,10 +1,10 @@
 import { createContext, useState, useEffect } from "react";
-import "@/styles/globals.css";
 import { useRouter } from "next/router";
 // import Layout from "@/components/Layout";
 import Loader from "@/components/loader";
 import toast, { Toaster } from "react-hot-toast";
 import { PrimeReactProvider } from 'primereact/api';
+import "@/styles/globals.css";
 import "primereact/resources/themes/lara-light-cyan/theme.css";
 
 export const userContext = createContext();

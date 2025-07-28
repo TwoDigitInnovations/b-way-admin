@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { Search, Bell, ChevronDown, Menu, X } from "lucide-react";
+import React, { useContext, useState } from 'react';
+import { Search, Bell, ChevronDown, Menu, X, Lock } from "lucide-react";
 import { useRouter } from "next/router";
 import { LogOut } from "lucide-react";
 import Sidebar from "./sidebar";
+import { userContext } from '@/pages/_app';
 
 export default function Layout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const router = useRouter();
+  const [user, setUser] = useContext(userContext);
   
   return (
     <div className="flex h-screen bg-gray-50">
@@ -78,7 +80,7 @@ export default function Layout({ children, title }) {
                   className="flex items-center space-x-2 relative"
                 >
                   <span className="text-sm text-gray-700 hidden md:block cursor-pointer">
-                    System Admin
+                    {user?.name || "System Admin"}
                   </span>
                   <ChevronDown className="w-4 h-4 text-gray-400" />
                 </div>
@@ -87,11 +89,21 @@ export default function Layout({ children, title }) {
                     <ul className="py-1">
                       <li
                         onClick={() => {
+                          router.push("/change-password");
+                        }}
+                        className="px-4 py-2 text-primary hover:bg-gray-100 cursor-pointer text-sm
+                      transition-colors"
+                      >
+                        <Lock className="inline-block mr-2 w-4 h-4" />
+                        Change Password
+                      </li> 
+                      <li
+                        onClick={() => {
                           localStorage.removeItem("token");
                           localStorage.removeItem("userDetail");
                           router.push("/");
                         }}
-                        className="px-4 py-2 text-red-500 hover:bg-gray-100 cursor-pointer
+                        className="px-4 py-2 text-red-500 hover:bg-gray-100 cursor-pointer text-sm
                       transition-colors"
                       >
                         <LogOut className="inline-block mr-2 w-4 h-4" />

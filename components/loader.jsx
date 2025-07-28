@@ -5,7 +5,7 @@ const Loader = (props) => {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-[99999] flex items-center justify-center"
       style={{
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         backdropFilter: 'blur(4px)'
@@ -17,7 +17,7 @@ const Loader = (props) => {
         color="#FF4B00"
         ariaLabel="circles-loading"
         wrapperStyle={{}}
-        wrapperClass=""
+        wrapperclassName=""
         visible={props.open}
       />
     </div>

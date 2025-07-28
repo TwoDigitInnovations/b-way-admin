@@ -32,13 +32,13 @@ import {
   FileBarChart,
   LogOut,
 } from "lucide-react";
-import Sidebar from "../components/sidebar";
 import Operational from "@/components/Operational";
 import Investor from "@/components/Investor";
 import { useRouter } from "next/router";
 import Layout from "@/components/layout";
+import isAuth from "@/components/isAuth";
 
-function Dashboard() {
+function Dashboard({user}) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("operational");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -53,6 +53,7 @@ function Dashboard() {
       changeText: "Broaches",
       icon: "/images/img5.png",
       trend: "up",
+      role: ["ADMIN", "DISPATCHER", "USER"],
     },
     {
       title: "Orders in Transit",
@@ -61,6 +62,7 @@ function Dashboard() {
       icon: "/images/img6.png",
       color: "yellow",
       trend: "up",
+      role: ["ADMIN", "DISPATCHER", "USER"],
     },
     {
       title: "Sales this Week",
@@ -69,6 +71,7 @@ function Dashboard() {
       icon: "/images/img7.png",
       color: "green",
       trend: "up",
+      role: ["ADMIN", "DISPATCHER", "USER"],
     },
     {
       title: "Facilities",
@@ -77,6 +80,7 @@ function Dashboard() {
       icon: "/images/img3.png",
       color: "red",
       trend: "up",
+      role: ["ADMIN", "DISPATCHER", "USER"],
     },
     {
       title: "Compliance Alerts",
@@ -85,16 +89,23 @@ function Dashboard() {
       icon: "/images/img4.png",
       color: "blue",
       trend: "up",
+      role: ["ADMIN", "DISPATCHER", "USER"],
     },
     {
       title: "Available Drivers",
       value: "204",
       icon: "/images/driver.png",
+      change: "5 Flagged alerts",
+      trend: "up",
+      role: ["ADMIN"]
     },
     {
       title: "Available Partners",
       value: "400",
       icon: "/images/user.png",
+      change: "5 Flagged alerts",
+      trend: "up",
+      role: ["ADMIN"]
     },
   ];
 
@@ -238,6 +249,7 @@ function Dashboard() {
 
   return (
     <Layout title="Dashboard">
+      {user?.role === "ADMIN" && (
       <div className="bg-white shadow-sm border border-gray-200 p-2 mb-4 lg:mb-6">
         <div className="flex space-x-8">
           <button
@@ -262,6 +274,7 @@ function Dashboard() {
           </button>
         </div>
       </div>
+      )}
       {/* Main Dashboard Content */}
       {activeTab === "operational" ? (
         <Operational
@@ -281,4 +294,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default isAuth(Dashboard);

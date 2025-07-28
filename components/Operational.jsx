@@ -1,4 +1,4 @@
-import React from "react";
+import React, { use, useContext } from "react";
 import {
   BarChart,
   Bar,
@@ -8,6 +8,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { TrendingUp } from "lucide-react";
+import { userContext } from "@/pages/_app";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
 
 export default function Operational({
   statsCards,
@@ -16,6 +19,30 @@ export default function Operational({
   actionButtons,
   orders,
 }) {
+  const [user, setUser] = useContext(userContext);
+
+    const getStatusStyle = (status) => {
+    const statusStyles = {
+      Active: "bg-green-100 text-green-800 border border-green-200",
+      Inactive: "bg-red-100 text-red-800 border border-red-200",
+      Pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+      Completed: "bg-blue-100 text-blue-800 border border-blue-200",
+      Cancelled: "bg-gray-100 text-gray-800 border border-gray-200",
+      Flagged: "bg-orange-100 text-secondary border border-orange-200",
+      Hold: "bg-purple-100 text-purple-800 border border-purple-200",
+    };
+
+    return (
+      <span
+        className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
+          statusStyles[status] || "bg-gray-100 text-gray-800"
+        }`}
+      >
+        {status}
+      </span>
+    );
+  };
+
   return (
     <main className="flex-1 overflow-auto p-4 lg:p-6">
       {/* Welcome Section */}
@@ -28,6 +55,13 @@ export default function Operational({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6 mb-6 lg:mb-8">
           {statsCards.map((card, index) => {
             const Icon = card.icon;
+            if (
+              Array.isArray(card.role) &&
+              !card.role.includes(user?.role?.toUpperCase())
+            ) {
+              return null;
+            }
+
             return (
               <div
                 key={index}
@@ -97,128 +131,136 @@ export default function Operational({
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8">
-          {/* Total Money Paid Chart */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-base lg:text-lg font-semibold text-gray-900">
-                  Activity
-                </h3>
-                <p className="text-lg lg:text-xl font-bold text-gray-900">
-                  Total Money Paid
-                </p>
+        {user?.role === "ADMIN" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8">
+            {/* Total Money Paid Chart */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base lg:text-lg font-semibold text-gray-900">
+                    Activity
+                  </h3>
+                  <p className="text-lg lg:text-xl font-bold text-gray-900">
+                    Total Money Paid
+                  </p>
+                </div>
+                <select className="bg-[#003C72] text-white px-3 py-1 rounded text-sm">
+                  <option>Weekly</option>
+                  <option>Monthly</option>
+                  <option>Yearly</option>
+                </select>
               </div>
-              <select className="bg-[#003C72] text-white px-3 py-1 rounded text-sm">
-                <option>Weekly</option>
-                <option>Monthly</option>
-                <option>Yearly</option>
-              </select>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={totalMoneyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={12}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={12}
+                      tickFormatter={(value) => `${value / 1000}k`}
+                    />
+                    <Bar dataKey="value" fill="#003C72" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={totalMoneyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    fontSize={12}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    fontSize={12}
-                    tickFormatter={(value) => `${value / 1000}k`}
-                  />
-                  <Bar dataKey="value" fill="#003C72" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
 
-          {/* Deliveries Overview Chart */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-base lg:text-lg font-semibold text-gray-900">
-                  Analytics Data
-                </h3>
-                <p className="text-lg lg:text-xl font-bold text-gray-900">
-                  Deliveries Overview
-                </p>
-              </div>
-              <div className="flex items-center space-x-4 text-xs">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-[#003C72] rounded mr-1"></div>
-                  <span>2.01M</span>
+            {/* Deliveries Overview Chart */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base lg:text-lg font-semibold text-gray-900">
+                    Analytics Data
+                  </h3>
+                  <p className="text-lg lg:text-xl font-bold text-gray-900">
+                    Deliveries Overview
+                  </p>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 bg-orange-500 rounded mr-1"></div>
-                  <span>2.20M</span>
+                <div className="flex items-center space-x-4 text-xs">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-[#003C72] rounded mr-1"></div>
+                    <span>2.01M</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 bg-secondary rounded mr-1"></div>
+                    <span>2.20M</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={deliveriesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    fontSize={12}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    fontSize={12}
-                    tickFormatter={(value) => `${value / 1000}k`}
-                  />
-                  <Bar
-                    dataKey="delivered"
-                    fill="#003C72"
-                    radius={[2, 2, 0, 0]}
-                  />
-                  <Bar dataKey="pending" fill="#ff6b35" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={deliveriesData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={12}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      fontSize={12}
+                      tickFormatter={(value) => `${value / 1000}k`}
+                    />
+                    <Bar
+                      dataKey="delivered"
+                      fill="#003C72"
+                      radius={[2, 2, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="pending"
+                      fill="#ff6b35"
+                      radius={[2, 2, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6 lg:mb-8">
           {/* Action Buttons - Now Vertical */}
-          <div className="lg:col-span-1">
-            <div className="space-y-3">
-              {actionButtons.map((button, index) => {
-                const Icon = button.icon;
-                return (
-                  <button
-                    key={index}
-                    className="w-full bg-[#003C72] hover:bg-[#003C72] text-white p-2 lg:p-3 rounded-lg flex items-center space-x-2 transition-colors text-left min-h-[50px]"
-                  >
-                    {typeof Icon === "string" ? (
-                      <img
-                        src={Icon}
-                        alt={button.title}
-                        className="w-5 h-5 object-contain"
-                      />
-                    ) : (
-                      <Icon className="w-4 h-4 flex-shrink-0" />
-                    )}
-                    <span className="font-medium text-xs lg:text-sm leading-tight whitespace-pre-line">
-                      {button.title}
-                    </span>
-                  </button>
-                );
-              })}
+          {user?.role === "ADMIN" && (
+            <div className="lg:col-span-1">
+              <div className="space-y-3">
+                {actionButtons.map((button, index) => {
+                  const Icon = button.icon;
+                  return (
+                    <button
+                      key={index}
+                      className="w-full bg-[#003C72] hover:bg-[#003C72] text-white p-2 lg:p-3 rounded-lg flex items-center space-x-2 transition-colors text-left min-h-[50px]"
+                    >
+                      {typeof Icon === "string" ? (
+                        <img
+                          src={Icon}
+                          alt={button.title}
+                          className="w-5 h-5 object-contain"
+                        />
+                      ) : (
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                      )}
+                      <span className="font-medium text-xs lg:text-sm leading-tight whitespace-pre-line">
+                        {button.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Recent Orders Table */}
-          <div className="lg:col-span-4">
+          <div className={`lg:col-span-${user?.role === "ADMIN" ? "4" : "5"}`}>
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="text-base lg:text-lg font-semibold text-gray-900">
@@ -230,90 +272,105 @@ export default function Operational({
               </div>
 
               <div className="overflow-hidden">
-                <table className="w-full table-fixed">
-                  <thead className="bg-[#003C72] text-white">
-                    <tr>
-                      <th className="w-12 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        No.
-                      </th>
-                      <th className="w-32 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Facility Name
-                      </th>
-                      <th className="w-24 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Order ID
-                      </th>
-                      <th className="w-40 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Item(s)
-                      </th>
-                      <th className="w-16 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Qty
-                      </th>
-                      <th className="w-20 px-2 py-3 text-xs text-center justify-center font-medium uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="w-24 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider hidden lg:table-cell">
-                        Driver
-                      </th>
-                      <th className="w-24 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider hidden lg:table-cell">
-                        Route
-                      </th>
-                      <th className="w-20 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider hidden md:table-cell">
-                        ETA
-                      </th>
-                      <th className="w-16 px-2 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {orders.map((order, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                          {order.no}
-                        </td>
-                        <td
-                          className="px-2 py-2 text-sm text-orange-600 font-medium truncate"
-                          title={order.facilityName}
+                <DataTable
+                  value={orders}
+                  stripedRows
+                  tableStyle={{ minWidth: "50rem" }}
+                  rowClassName={() => "hover:bg-gray-50"}
+                  size="small"
+                  // style={{ overflow: "visible" }}
+                  // scrollable={false}
+                  // columnResizeMode="expand"
+                  // resizableColumns
+                  // paginator
+                  // rows={10}
+                  // rowsPerPageOptions={[5, 10, 25, 50]}
+                >
+                  <Column
+                    field="no"
+                    header="No."
+                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+                    body={(rowData, options) => (
+                      <span className="text-gray-600">
+                        {options.rowIndex + 1}
+                      </span>
+                    )}
+                  />
+                  <Column
+                    field="facilityName"
+                    header="Facility Name"
+                    bodyStyle={{
+                      verticalAlign: "middle",
+                      fontSize: "14px",
+                    }}
+                  />
+                  <Column
+                    field="orderId"
+                    header="Order ID"
+                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+                  />
+                  <Column
+                    field="items"
+                    header="Item(s)"
+                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+                  />
+                  <Column
+                    field="qty"
+                    header="Qty"
+                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+                  />
+                  <Column
+                    field="status"
+                    header="Status"
+                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+                    body={(rowData) => getStatusStyle(rowData.status)}
+                  />
+                  <Column
+                    field="assignedDriver"
+                    header="Driver"
+                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+                  />
+                  <Column
+                    field="route"
+                    header="Route"
+                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+                  />
+                  <Column
+                    field="route"
+                    header="Route"
+                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+                  />
+                  <Column
+                    field="eta"
+                    header="ETA"
+                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+                  />
+                  <Column
+                    header="Action"
+                    bodyStyle={{
+                      verticalAlign: "middle",
+                      textAlign: "center",
+                      overflow: "visible",
+                      position: "relative",
+                    }}
+                    body={(rowData, options) => (
+                      <div className="relative flex justify-center">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setSelectedRowData(rowData);
+                            // menuRef.current.toggle(event);
+                          }}
+                          className="text-secondary hover:text-secondary font-medium text-sm w-full bg-secondary/20 hover:bg-secondary/40 cursor-pointer py-1 px-2 rounded"
                         >
-                          {order.facilityName}
-                        </td>
-                        <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                          {order.orderId}
-                        </td>
-                        <td
-                          className="px-2 py-2 text-sm text-gray-900 truncate"
-                          title={order.items}
-                        >
-                          {order.items}
-                        </td>
-                        <td className="px-2 py-2 text-sm text-gray-900 truncate">
-                          {order.qty}
-                        </td>
-                        <td className="px-2 py-2">
-                          <span
-                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-md w-20 text-center justify-center ${order.statusColor} truncate`}
-                          >
-                            {order.status}
-                          </span>
-                        </td>
-                        <td className="px-2 py-2 text-sm text-gray-900 hidden lg:table-cell truncate">
-                          {order.assignedDriver}
-                        </td>
-                        <td className="px-2 py-2 text-sm text-gray-900 hidden lg:table-cell truncate">
-                          {order.route}
-                        </td>
-                        <td className="px-2 py-2 text-sm text-gray-900 hidden md:table-cell truncate">
-                          {order.eta}
-                        </td>
-                        <td className="px-2 py-2">
-                          <button className="text-orange-600 hover:text-orange-700 font-medium text-sm w-full bg-orange-500/20 hover:bg-orange-500/40 cursor-pointer py-1 px-2 rounded">
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          View
+                        </button>
+                      </div>
+                    )}
+                  />
+                </DataTable>
               </div>
             </div>
           </div>

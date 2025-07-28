@@ -1,17 +1,19 @@
 import axios from "axios";
-const ConstantsUrl = "http://localhost:8000";
+import Cookies from "js-cookie";
+// const ConstantsUrl = "http://localhost:8000";
+export const ConstantsUrl = process.env.NODE_ENV === 'development' ? "http://localhost:8000" : 'https://api.b-way.net';
 
 function Api(method, url, data, router, params) {
   return new Promise(function (resolve, reject) {
     let token = "";
     if (typeof window !== "undefined") {
-      token = localStorage?.getItem("token") || "";
+      token = localStorage?.getItem("token") || Cookies.get("token") || "";
     }
     axios({
       method,
       url: ConstantsUrl + url,
       data,
-      headers: { Authorization: `jwt ${token}` },
+      headers: { Authorization: `Bearer ${token}` },
       params,
     }).then(
       (res) => {
@@ -21,10 +23,11 @@ function Api(method, url, data, router, params) {
         console.log(err);
         if (err.response) {
           if (err?.response?.status === 401) {
-            if (typeof window !== "undefined") {
-              localStorage.removeItem("userDetail");
-              router?.push("/");
-            }
+            // if (typeof window !== "undefined") {
+            //   localStorage.removeItem("userDetail");
+            //   router?.push("/");
+            // }
+            console.error("Unauthorized access - redirecting to login");
           }
           reject(err.response.data);
         } else {

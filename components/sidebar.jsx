@@ -37,7 +37,7 @@ const Sidebar = () => {
       icon: "/images/s1.png",
       label: "New Delivery Request",
       href: "/new-order",
-      role: ["ADMIN", "DISPATCHER", "USER"],
+      role: ["USER"],
     },
     {
       icon: "/images/s2.png",

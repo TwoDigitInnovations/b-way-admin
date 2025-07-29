@@ -1,9 +1,9 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 // const ConstantsUrl = "http://localhost:8000";
-// const ConstantsUrl = process.env.NODE_ENV === 'development'? "http://localhost:8000" : 'https://api.b-way.net';
+const ConstantsUrl = process.env.NODE_ENV === 'development'? "http://localhost:8000" : 'https://api.b-way.net';
 
-const ConstantsUrl = "https://api.b-way.net";
+// const ConstantsUrl = "https://api.b-way.net";
 
 function Api(method, url, data, router, params) {
   return new Promise(function (resolve, reject) {

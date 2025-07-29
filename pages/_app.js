@@ -3,9 +3,11 @@ import { useRouter } from "next/router";
 // import Layout from "@/components/Layout";
 import Loader from "@/components/loader";
 import toast, { Toaster } from "react-hot-toast";
-import { PrimeReactProvider } from 'primereact/api';
+import { PrimeReactProvider } from "primereact/api";
 import "@/styles/globals.css";
 import "primereact/resources/themes/lara-light-cyan/theme.css";
+import { Provider } from "react-redux";
+import { store } from "@/store";
 
 export const userContext = createContext();
 export const openCartContext = createContext();
@@ -39,26 +41,20 @@ function App({ Component, pageProps }) {
   // }, []);
 
   return (
-    <PrimeReactProvider>
-      <Toaster position="top-right" reverseOrder={false} />
+    <Provider store={store}>
+      <PrimeReactProvider>
+        <Toaster position="top-right" reverseOrder={false} />
         <userContext.Provider value={[user, setUser]}>
-          {/* <openCartContext.Provider value={[openCart, setOpenCart]}>
-            <cartContext.Provider value={[cartData, setCartData]}>
-              <favoriteProductContext.Provider value={[Favorite, setFavorite]}> */}
-                {/* <Layout loader={setOpen} constant={data} toaster={(t) => toast(t.message)}> */}
-                {open && <Loader open={open} />}
-                <Component
-                  toaster={(t) => toast(t.message)}
-                  {...pageProps}
-                  loader={setOpen}
-                  user={user}
-                />
-                {/* </Layout> */}
-              {/* </favoriteProductContext.Provider>
-            </cartContext.Provider>
-          </openCartContext.Provider> */}
+          {open && <Loader open={open} />}
+          <Component
+            toaster={(t) => toast(t.message)}
+            {...pageProps}
+            loader={setOpen}
+            user={user}
+          />
         </userContext.Provider>
-    </PrimeReactProvider>
+      </PrimeReactProvider>
+    </Provider>
   );
 }
 export default App;

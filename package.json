@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
     "axios": "^1.11.0",
     "formik": "^2.4.6",
     "js-cookie": "^3.0.5",
@@ -18,7 +19,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.5.2",
-    "react-loader-spinner": "^6.1.6",
+    "react-redux": "^9.2.0",
     "recharts": "^3.1.0",
     "yup": "^1.6.1"
   },

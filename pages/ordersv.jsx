@@ -282,6 +282,7 @@ function Orders({ loader }) {
       Scheduled: "bg-yellow-100 text-yellow-800 border border-yellow-200",
       "Return Created": "bg-teal-100 text-teal-800 border border-teal-200",
       "Invoice Generated": "bg-green-100 text-green-800  border-green-800",
+      Pending: "bg-gray-100 text-gray-800 border border-gray-200",
     };
 
     return (
@@ -364,6 +365,7 @@ function Orders({ loader }) {
             field="route"
             header="Route"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => <span>{rowData?.route?.routeName}</span>}
           />
           <Column
             field="status"
@@ -476,7 +478,7 @@ function Orders({ loader }) {
                   </label>
                   <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                     <option>Select Route</option>
-                    <option selected>{selectedOrder?.route}</option>
+                    <option selected>{selectedOrder?.route?.routeName}</option>
                   </select>
                 </div>
               </div>
@@ -585,7 +587,7 @@ function Orders({ loader }) {
                   </label>
                   <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
                     <option>Select Assigned Driver</option>
-                    <option selected>{selectedOrder?.assignedDriver}</option>
+                    <option selected>{selectedOrder?.assignedDriver?.name}</option>
                   </select>
                 </div>
                 <div>

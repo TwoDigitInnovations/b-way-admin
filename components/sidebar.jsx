@@ -82,19 +82,19 @@ const Sidebar = () => {
       role: ["USER"],
     },
     {
-      icon: "/Images/notifications.svg",
+      icon: "/images/notifications.svg",
       label: "Notification & Alert",
       href: "/alerts",
       role: ["USER"],
     },
     {
-      icon: "/Images/manage_accounts.svg",
+      icon: "/images/manage_accounts.svg",
       label: "Account Information",
       href: "/account-info",
       role: ["USER"],
     },
     {
-      icon: "/Images/headset_mic.svg",
+      icon: "/images/headset_mic.svg",
       label: "Support & Help Center",
       href: "/support",
       role: ["USER"],

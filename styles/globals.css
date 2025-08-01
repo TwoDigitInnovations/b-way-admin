@@ -24,6 +24,11 @@
   }
 }
 
+@font-face {
+  font-family: "DS-DIGIT";
+  src: url("/fonts/ds_digital/DS-DIGIB.TTF") format("truetype");
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -221,4 +226,11 @@ table .p-datatable-thead tr th {
 
 .p-inputswitch.p-highlight .p-inputswitch-slider{
   background-color: var(--secondary) !important;
+}
+
+.clock {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+  font-family: "DS-DIGIT", Arial, Helvetica, sans-serif;
 }

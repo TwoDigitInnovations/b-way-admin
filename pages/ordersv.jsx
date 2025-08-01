@@ -12,6 +12,7 @@ import {
   Bell,
   ChevronDown,
   Clock,
+  Trash,
 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
@@ -22,8 +23,15 @@ import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import { Api } from "@/helper/service";
 import { useRouter } from "next/router";
+import toast from "react-hot-toast";
+import { Formik } from "formik";
+import * as Yup from "yup";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchDrivers } from "@/store/driverSlice";
+import { fetchRoutes } from "@/store/routeSlice";
+import items from "../utils/items.json";
 
-function Orders({ loader }) {
+function Orders({ loader, user }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [dropdownPosition, setDropdownPosition] = useState({ x: 0, y: 0 });
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -32,11 +40,102 @@ function Orders({ loader }) {
   const menuRef = useRef(null);
   const [selectedRowData, setSelectedRowData] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [viewModal, setViewModal] = useState(false);
+  const [assignModal, setAssignModal] = useState(false);
   // Pagination
   const [totalOrders, setTotalOrders] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRoute, setSelectedRoute] = useState("");
   const [limit] = useState(10);
   const router = useRouter();
+  const dispatch = useDispatch();
+  const { routes, assignedRoute, loading, error } = useSelector(
+    (state) => state.route
+  );
+
+  useEffect(() => {
+    dispatch(fetchRoutes({ page: 0, limit: 0 }));
+    console.log("Routes fetched");
+  }, [dispatch]);
+
+  // Add useEffect to log routes when they change
+  useEffect(() => {
+    console.log("Routes from Redux:", routes);
+    console.log("Routes loading:", loading);
+    console.log("Routes error:", error);
+  }, [routes, loading, error]);
+
+  const validationSchema = Yup.object({
+    items: Yup.string().required("Item(s) is required"),
+    qty: Yup.number()
+      .required("Quantity is required")
+      .min(1, "Must be at least 1"),
+    pickupLocation: Yup.object({
+      address: Yup.string().required("Pickup address is required"),
+      city: Yup.string().required("Pickup city is required"),
+      state: Yup.string().required("Pickup state is required"),
+      zipcode: Yup.string()
+        .matches(/^\d{5}$/, "Pickup zipcode must be exactly 5 digits")
+        .required("Pickup zipcode is required"),
+    }),
+    deliveryLocation: Yup.object({
+      address: Yup.string().required("Delivery address is required"),
+      city: Yup.string().required("Delivery city is required"),
+      state: Yup.string().required("Delivery state is required"),
+      zipcode: Yup.string()
+        .matches(/^\d{5}$/, "Delivery zipcode must be exactly 5 digits")
+        .required("Delivery zipcode is required"),
+    }),
+    // route: Yup.string().required("Route is required"),
+    // eta: Yup.string().required("ETA is required"),
+    // status: Yup.string().required("Status is required"),
+  });
+
+  const handleUpdateOrder = (values, { resetForm }) => {
+    loader(true);
+
+    // Transform the data to match backend expectations
+    const orderData = {
+      items: values.items,
+      qty: values.qty,
+      pickupLocation: {
+        address: values.pickupLocation.address,
+        city: values.pickupLocation.city,
+        state: values.pickupLocation.state,
+        zipcode: values.pickupLocation.zipcode,
+      },
+      deliveryLocation: {
+        address: values.deliveryLocation.address,
+        city: values.deliveryLocation.city,
+        state: values.deliveryLocation.state,
+        zipcode: values.deliveryLocation.zipcode,
+      },
+      // route: values.route,
+      eta: values.eta,
+      status: values.status,
+    };
+
+    Api("PUT", `/order/${selectedOrder._id}`, orderData, router)
+      .then((response) => {
+        if (response?.status) {
+          toast.success("Order updated successfully!");
+          setShowEditModal(false);
+          setSelectedOrder(null); // Clear selected order
+          resetForm(); // Reset form data
+          // Refresh the orders list without showing separate loader
+          fetchOrders(false);
+        } else {
+          toast.error("Failed to update order. Please try again.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error updating order:", error);
+        toast.error("An error occurred while updating the order.");
+      })
+      .finally(() => {
+        loader(false);
+      });
+  };
 
   const getMenuItems = (order) => [
     {
@@ -44,6 +143,7 @@ function Orders({ loader }) {
       icon: <Eye className="w-5 h-5 text-gray-500" />,
       command: () => {
         console.log("View clicked", order);
+        handleViewClick(order._id);
       },
     },
     {
@@ -54,13 +154,18 @@ function Orders({ loader }) {
         handleEditClick(order);
       },
     },
-    {
-      label: "Assign",
-      icon: <UserPlus className="w-5 h-5 text-gray-500" />,
-      command: () => {
-        console.log("Assign clicked", order);
-      },
-    },
+    ...(user.role !== "USER"
+      ? [
+          {
+            label: "Assign Route",
+            icon: <UserPlus className="w-5 h-5 text-gray-500" />,
+            command: () => {
+              console.log("Assign clicked", order);
+              handleAssign(order)
+            },
+          },
+        ]
+      : []),
     {
       label: "Create Return",
       icon: <RotateCcw className="w-5 h-5 text-gray-500" />,
@@ -75,7 +180,25 @@ function Orders({ loader }) {
         console.log("Download Return Load clicked", order);
       },
     },
+    ...(user.role === "USER"
+      ? [
+          {
+            label: "Delete",
+            icon: <Trash className="w-5 h-5 text-gray-500" />,
+            command: () => {
+              console.log("Delete clicked", order);
+              handleDeleteOrder(order._id);
+            },
+          },
+        ]
+      : []),
   ];
+
+  const handleViewClick = (id) => {
+    console.log("View clicked", id);
+    setViewModal(true);
+    fetchUserDetails(id);
+  };
 
   const toggleDropdown = (index, event) => {
     if (activeDropdown === index) {
@@ -92,145 +215,31 @@ function Orders({ loader }) {
     }
   };
 
-  const tempOrders = [
-    {
-      no: 1,
-      orderId: "ORD-20943",
-      items: "IV Adventure - Carthe",
-      qty: 12,
-      pickupLocation: "47 W 13th St, New York",
-      deliveryLocation: "20 Cooper Square, New York",
-      assignedDriver: "David M.",
-      route: "Carla G.",
-      status: "Cancelled",
-      eta: "2:10 PM",
-    },
-    {
-      no: 2,
-      orderId: "ORD-20943",
-      items: "IV Adventure",
-      qty: 20,
-      pickupLocation: "20 Cooper Square, New York",
-      deliveryLocation: "47 W 13th St, New York",
-      assignedDriver: "Carla G.",
-      route: "David M.",
-      status: "Delivered",
-      eta: "8:52 PM",
-    },
-    {
-      no: 3,
-      orderId: "ORD-20943",
-      items: "IV Adventure",
-      qty: 15,
-      pickupLocation: "47 W 13th St, New York",
-      deliveryLocation: "20 Cooper Square, New York",
-      assignedDriver: "David J.",
-      route: "Catrin D.",
-      status: "Picked Up",
-      eta: "8:52 AM",
-    },
-    {
-      no: 4,
-      orderId: "ORD-20943",
-      items: "IV Adventure - NCU",
-      qty: 10,
-      pickupLocation: "20 Cooper Square, New York",
-      deliveryLocation: "47 W 13th St, New York",
-      assignedDriver: "Catrin D.",
-      route: "David M.",
-      status: "Scheduled",
-      eta: "8:52 PM",
-    },
-    {
-      no: 5,
-      orderId: "ORD-20943",
-      items: "IV Adventure - Carthe",
-      qty: 12,
-      pickupLocation: "47 W 13th St, New York",
-      deliveryLocation: "20 Cooper Square, New York",
-      assignedDriver: "David M.",
-      route: "Carla G.",
-      status: "Return Created",
-      eta: "8:52 AM",
-    },
-    {
-      no: 6,
-      orderId: "ORD-20943",
-      items: "IV Osostrutus",
-      qty: 50,
-      pickupLocation: "20 Cooper Square, New York",
-      deliveryLocation: "47 W 13th St, New York",
-      assignedDriver: "Carla G.",
-      route: "David J.",
-      status: "Invoice Generated",
-      eta: "8:52 AM",
-    },
-    {
-      no: 7,
-      orderId: "ORD-20943",
-      items: "IV Adventure - Carthe",
-      qty: 15,
-      pickupLocation: "47 W 13th St, New York",
-      deliveryLocation: "20 Cooper Square, New York",
-      assignedDriver: "David J.",
-      route: "Catrin D.",
-      status: "Scheduled",
-      eta: "8:52 AM",
-    },
-    {
-      no: 8,
-      orderId: "ORD-20943",
-      items: "IV Adventure",
-      qty: 20,
-      pickupLocation: "20 Cooper Square, New York",
-      deliveryLocation: "47 W 13th St, New York",
-      assignedDriver: "Catrin D.",
-      route: "David M.",
-      status: "Delivered",
-      eta: "8:52 AM",
-    },
-    {
-      no: 9,
-      orderId: "ORD-20943",
-      items: "IV Adventure - Carthe",
-      qty: 25,
-      pickupLocation: "47 W 13th St, New York",
-      deliveryLocation: "20 Cooper Square, New York",
-      assignedDriver: "David M.",
-      route: "Carla G.",
-      status: "Cancelled",
-      eta: "8:52 AM",
-    },
-    {
-      no: 10,
-      orderId: "ORD-20943",
-      items: "IV Adventure - Carthe",
-      qty: 36,
-      pickupLocation: "20 Cooper Square, New York",
-      deliveryLocation: "47 W 13th St, New York",
-      assignedDriver: "Carla G.",
-      route: "David J.",
-      status: "Delivered",
-      eta: "8:52 AM",
-    },
-    {
-      no: 11,
-      orderId: "ORD-56545",
-      items: "IV Adventure - Alok",
-      qty: 36,
-      pickupLocation: "20 Cooper Square, New York",
-      deliveryLocation: "47 W 13th St, New York",
-      assignedDriver: "Carla G.",
-      route: "David J.",
-      status: "Delivered",
-      eta: "8:52 AM",
-    },
-  ];
+  const fetchUserDetails = (id) => {
+    loader(true);
+    Api("GET", `/order/${id}`)
+      .then((res) => {
+        if (res?.data) {
+          setSelectedOrder(res.data);
+        } else if (res?.status && res?.data) {
+          setSelectedOrder(res.data);
+        }
+      })
+      .catch((err) => {
+        toast.error(
+          err?.message || "Failed to fetch user details. Please try again."
+        );
+      })
+      .finally(() => {
+        loader(false);
+      });
+  };
 
   const handleEditClick = (order) => {
-    setSelectedOrder(order);
+    // setSelectedOrder(order);
     setShowEditModal(true);
     setActiveDropdown(null);
+    fetchUserDetails(order?._id);
   };
 
   const handleClickOutside = (event) => {
@@ -239,34 +248,97 @@ function Orders({ loader }) {
     }
   };
 
+  const handleDeleteOrder = (orderId) => {
+    loader(true);
+    Api("DELETE", `/order/${orderId}`)
+      .then((res) => {
+        if (res.status) {
+          toast.success("Order deleted successfully.");
+          setOrders((prevOrders) =>
+            prevOrders.filter((order) => order._id !== orderId)
+          );
+        }
+      })
+      .catch((error) => {
+        console.error("Error deleting order:", error);
+        toast.error("An error occurred while deleting the order.");
+      })
+      .finally(() => {
+        loader(false);
+      });
+  };
+
+  const handleAssign = (order) => {
+    setAssignModal(true);
+    setSelectedOrder(order);
+  }
+
+  const assignRoute = () => {
+    if (!selectedRoute) {
+      toast.error("Please select a route to assign.");
+      return;
+    }
+
+    loader(true);
+    const data = {
+      route: selectedRoute
+    }
+    Api("PUT", `/order/${selectedOrder._id}`, data, router)
+      .then((res) => {
+        if (res.status) {
+          toast.success("Route assigned successfully.");
+          setOrders((prevOrders) =>
+            prevOrders.map((order) =>
+              order._id === selectedOrder._id ? { ...order, route: selectedRoute } : order
+            )
+          );
+          fetchOrders(false); // Refresh orders list
+        }
+      })
+      .catch((error) => {
+        console.error("Error assigning route:", error);
+        toast.error("An error occurred while assigning the route.");
+      })
+      .finally(() => {
+        loader(false);
+        setSelectedOrder(null);
+        setAssignModal(false);
+        setSelectedRoute("");
+      });
+  };
+
   useEffect(() => {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
+  const fetchOrders = async (showLoader = true) => {
+    if (showLoader) {
       loader(true);
-      try {
-        const response = await Api(
-          "GET",
-          `/order?page=${currentPage}&limit=${limit}`,
-          null,
-          router
-        );
+    }
+    try {
+      const response = await Api(
+        "GET",
+        `/order?page=${currentPage}&limit=${limit}`,
+        null,
+        router
+      );
 
-        if (response.status) {
-          setOrders(response.data);
-          setTotalOrders(response.totalOrders);
-          setCurrentPage(response.currentPage);
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      } finally {
+      if (response.status) {
+        setOrders(response.data);
+        setTotalOrders(response.totalOrders);
+        setCurrentPage(response.currentPage);
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+    } finally {
+      if (showLoader) {
         loader(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchOrders();
   }, [currentPage, limit]);
 
@@ -349,23 +421,29 @@ function Orders({ loader }) {
             field="pickupLocation"
             header="Pickup Location"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span>
+                {rowData?.pickupLocation
+                  ? rowData?.pickupLocation?.address
+                  : "N/A"}
+              </span>
+            )}
           />
           <Column
             field="deliveryLocation"
             header="Delivery Location"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-          />
-          <Column
-            field="assignedDriver"
-            header="Assigned Driver"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-            body={(rowData) => <span>{rowData?.assignedDriver?.name}</span>}
+            body={(rowData) => (
+              <span>{rowData?.deliveryLocation?.address}</span>
+            )}
           />
           <Column
             field="route"
             header="Route"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-            body={(rowData) => <span>{rowData?.route?.routeName}</span>}
+            body={(rowData) => (
+              <span>{rowData?.route ? rowData?.route?.routeName : "N/A"}</span>
+            )}
           />
           <Column
             field="status"
@@ -376,6 +454,7 @@ function Orders({ loader }) {
             field="eta"
             header="ETA"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => <span>{rowData.eta ? rowData.eta : "N/A"}</span>}
           />
           <Column
             header="Action"
@@ -432,7 +511,7 @@ function Orders({ loader }) {
       />
 
       {/* Edit Order Modal */}
-      {showEditModal && (
+      {showEditModal && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
@@ -441,211 +520,527 @@ function Orders({ loader }) {
                 Edit Order
               </h2>
               <button
-                onClick={() => setShowEditModal(false)}
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedOrder(null);
+                }}
                 className="p-2 hover:bg-gray-100 rounded-full"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
 
-            {/* Modal Content */}
+            <Formik
+              key={selectedOrder?._id || "new"} // Force reinitialize when order changes
+              initialValues={{
+                items: selectedOrder?.items || "",
+                qty: selectedOrder?.qty || "",
+                pickupLocation: {
+                  address: selectedOrder?.pickupLocation?.address || "",
+                  city: selectedOrder?.pickupLocation?.city || "",
+                  state: selectedOrder?.pickupLocation?.state || "",
+                  zipcode: selectedOrder?.pickupLocation?.zipcode || "",
+                },
+                deliveryLocation: {
+                  address: selectedOrder?.deliveryLocation?.address || "",
+                  city: selectedOrder?.deliveryLocation?.city || "",
+                  state: selectedOrder?.deliveryLocation?.state || "",
+                  zipcode: selectedOrder?.deliveryLocation?.zipcode || "",
+                },
+                route: selectedOrder?.route?._id || "",
+                status: selectedOrder.status || "",
+                eta: selectedOrder?.eta || "",
+              }}
+              validationSchema={validationSchema}
+              onSubmit={handleUpdateOrder}
+              enableReinitialize={true} // Allow form to reinitialize when initialValues change
+            >
+              {({
+                handleChange,
+                handleBlur,
+                values,
+                handleSubmit,
+                errors,
+                touched,
+              }) => (
+                <form onSubmit={handleSubmit}>
+                  {/* Modal Content */}
+                  <div className="p-4 sm:p-6">
+                    {/* Item(S) and Qty Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Item(S)
+                        </label>
+                        <select
+                          name="items"
+                          value={values.items}
+                          onChange={handleChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                        >
+                          <option value="">Select Item(S)</option>
+                          {items?.items?.map((item) => (
+                            <option key={item.id} value={item.name}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-sm text-red-600">
+                          {errors.items && touched.items && errors.items}
+                        </span>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Qty
+                        </label>
+                        <input
+                          type="number"
+                          name="qty"
+                          value={values.qty}
+                          onChange={handleChange}
+                          placeholder="Qty"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                        />
+                        <span className="text-sm text-red-600">
+                          {errors.qty && touched.qty && errors.qty}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Pickup Location Section */}
+                    <div className="mb-6">
+                      <h3 className="text-md font-semibold text-[#003C72] mb-3">
+                        Pickup Location
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Address
+                          </label>
+                          <input
+                            type="text"
+                            name="pickupLocation.address"
+                            value={values.pickupLocation.address}
+                            onChange={handleChange}
+                            placeholder="Address"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
+                          <span className="text-sm text-red-600">
+                            {errors.pickupLocation?.address &&
+                              touched.pickupLocation?.address &&
+                              errors.pickupLocation.address}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            City
+                          </label>
+                          <input
+                            type="text"
+                            name="pickupLocation.city"
+                            value={values.pickupLocation.city}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                            placeholder="City"
+                          />
+                          <span className="text-sm text-red-600">
+                            {errors.pickupLocation?.city &&
+                              touched.pickupLocation?.city &&
+                              errors.pickupLocation.city}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            State
+                          </label>
+                          <input
+                            type="text"
+                            name="pickupLocation.state"
+                            value={values.pickupLocation.state}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                            placeholder="State"
+                          />
+                          <span className="text-sm text-red-600">
+                            {errors.pickupLocation?.state &&
+                              touched.pickupLocation?.state &&
+                              errors.pickupLocation.state}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Zipcode
+                          </label>
+                          <input
+                            type="text"
+                            name="pickupLocation.zipcode"
+                            value={values.pickupLocation.zipcode}
+                            onChange={handleChange}
+                            placeholder="Zipcode"
+                            maxLength={5}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
+                          <span className="text-sm text-red-600">
+                            {errors.pickupLocation?.zipcode &&
+                              touched.pickupLocation?.zipcode &&
+                              errors.pickupLocation.zipcode}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delivery Location Section */}
+                    <div className="mb-6">
+                      <h3 className="text-md font-semibold text-[#003C72] mb-3">
+                        Delivery Location
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Address
+                          </label>
+                          <input
+                            type="text"
+                            name="deliveryLocation.address"
+                            value={values.deliveryLocation.address}
+                            onChange={handleChange}
+                            placeholder="Address"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
+                          <span className="text-sm text-red-600">
+                            {errors.deliveryLocation?.address &&
+                              touched.deliveryLocation?.address &&
+                              errors.deliveryLocation.address}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            City
+                          </label>
+                          <select
+                            name="deliveryLocation.city"
+                            value={values.deliveryLocation.city}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          >
+                            <option value="">Select City</option>
+                            <option value="New York">New York</option>
+                          </select>
+                          <span className="text-sm text-red-600">
+                            {errors.deliveryLocation?.city &&
+                              touched.deliveryLocation?.city &&
+                              errors.deliveryLocation.city}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            State
+                          </label>
+                          <select
+                            name="deliveryLocation.state"
+                            value={values.deliveryLocation.state}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          >
+                            <option value="">Select State</option>
+                            <option value="California">California</option>
+                          </select>
+                          <span className="text-sm text-red-600">
+                            {errors.deliveryLocation?.state &&
+                              touched.deliveryLocation?.state &&
+                              errors.deliveryLocation.state}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Zipcode
+                          </label>
+                          <input
+                            type="text"
+                            name="deliveryLocation.zipcode"
+                            value={values.deliveryLocation.zipcode}
+                            onChange={handleChange}
+                            placeholder="Zipcode"
+                            maxLength={5}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
+                          <span className="text-sm text-red-600">
+                            {errors.deliveryLocation?.zipcode &&
+                              touched.deliveryLocation?.zipcode &&
+                              errors.deliveryLocation.zipcode}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {user?.role === "ADMIN" && (
+                      <div className="my-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Status
+                            </label>
+                            <select
+                              name="status"
+                              value={values.status}
+                              onChange={handleChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                            >
+                              <option value="">Select Status</option>
+                              <option value="Pending">Pending</option>
+                              <option value="Cancelled">Cancelled</option>
+                              <option value={"Delivered"}>Delivered</option>
+                              <option value={"Picked Up"}>Picked Up</option>
+                              <option value={"Scheduled"}>Scheduled</option>
+                              <option value={"Return Created"}>
+                                Return Created
+                              </option>
+                              <option value={"Invoice Generated"}>
+                                Invoice Generated
+                              </option>
+                            </select>
+                            <span className="text-sm text-red-600">
+                              {errors.status && touched.status && errors.status}
+                            </span>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              ETA
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                name="eta"
+                                value={values.eta}
+                                onChange={handleChange}
+                                placeholder="2:10 PM"
+                                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                              />
+                              <Clock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Submit Button */}
+                    <div className="flex justify-start">
+                      <button
+                        type="submit"
+                        className="bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors"
+                      >
+                        Update Order
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </Formik>
+          </div>
+        </div>
+      )}
+
+      {viewModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Order Details
+              </h2>
+              <button
+                onClick={() => {
+                  setViewModal(false);
+                  setSelectedOrder(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
             <div className="p-4 sm:p-6">
-              {/* Item(S) and Qty Row */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Item(S)
-                  </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
-                    <option>Select Item(S)</option>
-                    <option selected>{selectedOrder?.items}</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Qty
-                  </label>
-                  <input
-                    type="number"
-                    defaultValue={selectedOrder?.qty}
-                    placeholder="Qty"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Route
-                  </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
-                    <option>Select Route</option>
-                    <option selected>{selectedOrder?.route?.routeName}</option>
-                  </select>
-                </div>
+              <div className="bg-white">
+                <dl className="w-full grid grid-cols-6 gap-4">
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Order ID
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder.orderId || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Item(s)
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder.items || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Quantity
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder.qty || "N/A"}
+                    </dd>
+                  </div>
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-2">
+                    Pickup Location
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Pickup Address
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.pickupLocation?.address || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Pickup City
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.pickupLocation?.city || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Pickup State
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.pickupLocation?.state || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Pickup Zipcode
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.pickupLocation?.zipcode || "N/A"}
+                    </dd>
+                  </div>
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Delivery Location
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Delivery Address
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.deliveryLocation?.address || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Delivery City
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.deliveryLocation?.city || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Delivery State
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.deliveryLocation?.state || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Delivery Zipcode
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.deliveryLocation?.zipcode || "N/A"}
+                    </dd>
+                  </div>
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Other Details
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Status
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.status || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">ETA</dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder?.eta || "N/A"}
+                    </dd>
+                  </div>
+                </dl>
               </div>
 
-              {/* Pickup Location Section */}
-              <div className="mb-6">
-                <h3 className="text-md font-semibold text-[#003C72] mb-3">
-                  Pickup Location
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Address
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={selectedOrder?.pickupLocation}
-                      placeholder="Address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      City
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
-                      <option>Select City</option>
-                      <option selected>New York</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      State
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
-                      <option>Select State</option>
-                      <option selected>NY</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Zipcode
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Zipcode"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                    />
-                  </div>
-                </div>
-              </div>
+              {/* Additional details can be added here */}
+            </div>
+          </div>
+        </div>
+      )}
 
-              {/* Delivery Location Section */}
-              <div className="mb-6">
-                <h3 className="text-md font-semibold text-[#003C72] mb-3">
-                  Delivery Location
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Address
-                    </label>
-                    <input
-                      type="text"
-                      defaultValue={selectedOrder?.deliveryLocation}
-                      placeholder="Address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      City
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
-                      <option>Select City</option>
-                      <option selected>New York</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      State
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
-                      <option>Select State</option>
-                      <option selected>NY</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Zipcode
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Zipcode"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Row - Assigned Driver, ETA, Status */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assigned Driver
-                  </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
-                    <option>Select Assigned Driver</option>
-                    <option selected>{selectedOrder?.assignedDriver?.name}</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ETA
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      defaultValue={selectedOrder?.eta}
-                      placeholder="2:10 PM"
-                      className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                    />
-                    <Clock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
-                    <option>Select Status</option>
-                    <option selected={selectedOrder?.status === "Cancelled"}>
-                      Cancelled
-                    </option>
-                    <option selected={selectedOrder?.status === "Delivered"}>
-                      Delivered
-                    </option>
-                    <option selected={selectedOrder?.status === "Picked Up"}>
-                      Picked Up
-                    </option>
-                    <option selected={selectedOrder?.status === "Scheduled"}>
-                      Scheduled
-                    </option>
-                    <option
-                      selected={selectedOrder?.status === "Return Created"}
-                    >
-                      Return Created
-                    </option>
-                    <option
-                      selected={selectedOrder?.status === "Invoice Generated"}
-                    >
-                      Invoice Generated
-                    </option>
-                  </select>
-                </div>
+      {assignModal && (<div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Assign Route</h2>
+            <button
+              onClick={() => {
+                setAssignModal(false);
+                setSelectedOrder(null);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-full"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <div className="p-4 sm:p-6">
+            {/* Item(S) and Qty Row */}
+            <div className="grid gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                 Route
+                </label>
+                <select
+                  name="route"
+                  value={selectedRoute}
+                  onChange={(e) => setSelectedRoute(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700 disabled:bg-gray-100"
+                >
+                  <option value="">
+                    {loading ? "Loading routes..." : "Select Route"}
+                  </option>
+                  {routes && routes.length > 0 ? (
+                    routes.map((item) => (
+                      <option key={item._id} value={item._id}>
+                        {item.routeName}
+                      </option>
+                    ))
+                  ) : (
+                    !loading && (
+                      <option value="" disabled>
+                        No routes available
+                      </option>
+                    )
+                  )}
+                </select>
               </div>
 
               {/* Submit Button */}
-              <div className="flex justify-start">
-                <button className="bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors">
-                  Submit
+              <div className="flex w-full">
+                <button
+                  onClick={assignRoute}
+                  type="submit"
+                  className="bg-secondary w-full hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors"
+                >
+                  Assign Route
                 </button>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>)}
     </Layout>
   );
 }

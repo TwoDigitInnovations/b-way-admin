@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   MoreHorizontal,
   Eye,
@@ -15,216 +15,219 @@ import {
   DeleteIcon,
   Trash,
 } from "lucide-react";
-import Sidebar from "@/components/sidebar";
-import Header from "@/components/header";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
 import isAuth from "@/components/isAuth";
+import { useDispatch, useSelector } from "react-redux";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
+import { Api } from "@/helper/service";
+import toast from "react-hot-toast";
+import {
+  fetchRoutes,
+  selectRoutes,
+  selectLoading,
+  selectTotal,
+} from "@/store/routeSlice";
+import { fetchDrivers } from "@/store/driverSlice";
 
-function RoutesSchedules() {
+// Validation schema using Yup
+const validationSchema = Yup.object({
+  routeName: Yup.string()
+    .required("Route name is required")
+    .min(2, "Route name must be at least 2 characters"),
+  startAddress: Yup.string().required("Start address is required"),
+  startCity: Yup.string().required("Start city is required"),
+  startState: Yup.string().required("Start state is required"),
+  startZipcode: Yup.string()
+    .required("Start zipcode is required")
+    .matches(
+      /^\d{5}(-\d{4})?$/,
+      "Invalid zipcode format (e.g., 12345 or 12345-6789)"
+    ),
+  endAddress: Yup.string().required("End address is required"),
+  endCity: Yup.string().required("End city is required"),
+  endState: Yup.string().required("End state is required"),
+  endZipcode: Yup.string()
+    .required("End zipcode is required")
+    .matches(
+      /^\d{5}(-\d{4})?$/,
+      "Invalid zipcode format (e.g., 12345 or 12345-6789)"
+    ),
+  stops: Yup.string().required("At least one stop is required"),
+  assignedDriver: Yup.string().required("Assigned driver is required"),
+  eta: Yup.string().required("ETA is required"),
+  activeDays: Yup.string().required("Active days are required"),
+  status: Yup.string()
+    .required("Status is required")
+    .oneOf(["Active", "Completed", "Archive"], "Invalid status selected"),
+});
+
+// Initial form values
+const initialValues = {
+  routeName: "",
+  startAddress: "",
+  startCity: "",
+  startState: "",
+  startZipcode: "",
+  endAddress: "",
+  endCity: "",
+  endState: "",
+  endZipcode: "",
+  stops: "",
+  assignedDriver: "",
+  eta: "",
+  activeDays: "",
+  status: "",
+};
+
+function RoutesSchedules({ loader }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingRoute, setEditingRoute] = useState(null);
-  const [formData, setFormData] = useState({
-    routeName: "",
-    startAddress: "",
-    startCity: "",
-    startState: "",
-    startZipcode: "",
-    endAddress: "",
-    endCity: "",
-    endState: "",
-    endZipcode: "",
-    stops: "",
-    assignedDriver: "",
-    eta: "",
-    activeDays: "",
-    status: "",
-  });
+  const [selectedRouteData, setSelectedRouteData] = useState(null);
+  const [viewModal, setViewModal] = useState(false);
   const menuRef = useRef(null);
   const [selectedRowData, setSelectedRowData] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit] = useState(10);
+  const dispatch = useDispatch();
+  const routes = useSelector(selectRoutes);
+  const totalPages = useSelector(selectTotal);
+  const loading = useSelector(selectLoading);
+  const { drivers, assignedDriver } = useSelector((state) => state.driver);
 
-  const routes = [
-    {
-      no: 1,
-      routeName: "Route A - North Bergen",
-      startLocation: "47 W 13th St, New York",
-      endLocation: "20 Cooper Square, New York",
-      stops: "Jammu Hospital",
-      assignedDriver: "David M.",
-      eta: "2:10 PM",
-      activeDays: "Mon-Fri",
-      status: "Archive",
-    },
-    {
-      no: 2,
-      routeName: "Route B - North Bergen",
-      startLocation: "20 Cooper Square, New York",
-      endLocation: "47 W 13th St, New York",
-      stops: "Capitol Hospital",
-      assignedDriver: "Carla G.",
-      eta: "8:52 PM",
-      activeDays: "Sat only",
-      status: "Completed",
-    },
-    {
-      no: 3,
-      routeName: "Route C - North Bergen",
-      startLocation: "47 W 13th St, New York",
-      endLocation: "20 Cooper Square, New York",
-      stops: "Jim Pharmacy",
-      assignedDriver: "David J.",
-      eta: "8:52 AM",
-      activeDays: "Mon-Fri",
-      status: "Active",
-    },
-    {
-      no: 4,
-      routeName: "Route D - North Bergen",
-      startLocation: "20 Cooper Square, New York",
-      endLocation: "47 W 13th St, New York",
-      stops: "Bellevue Hospital",
-      assignedDriver: "Catrin D.",
-      eta: "8:52 PM",
-      activeDays: "Sat only",
-      status: "Completed",
-    },
-    {
-      no: 5,
-      routeName: "Route A - North Bergen",
-      startLocation: "47 W 13th St, New York",
-      endLocation: "20 Cooper Square, New York",
-      stops: "Oxford Hospital",
-      assignedDriver: "David M.",
-      eta: "8:52 AM",
-      activeDays: "Mon-Fri",
-      status: "Archive",
-    },
-    {
-      no: 6,
-      routeName: "Route B - North Bergen",
-      startLocation: "20 Cooper Square, New York",
-      endLocation: "47 W 13th St, New York",
-      stops: "Carla G.",
-      assignedDriver: "Carla G.",
-      eta: "8:52 AM",
-      activeDays: "Sat only",
-      status: "Active",
-    },
-    {
-      no: 7,
-      routeName: "Route C - North Bergen",
-      startLocation: "47 W 13th St, New York",
-      endLocation: "20 Cooper Square, New York",
-      stops: "Capitol Hospital",
-      assignedDriver: "David J.",
-      eta: "8:52 AM",
-      activeDays: "Mon-Fri",
-      status: "Archive",
-    },
-    {
-      no: 8,
-      routeName: "Route D - North Bergen",
-      startLocation: "20 Cooper Square, New York",
-      endLocation: "47 W 13th St, New York",
-      stops: "Bellevue Hospital",
-      assignedDriver: "Catrin D.",
-      eta: "8:52 AM",
-      activeDays: "Sat only",
-      status: "Completed",
-    },
-    {
-      no: 9,
-      routeName: "Route A - North Bergen",
-      startLocation: "47 W 13th St, New York",
-      endLocation: "20 Cooper Square, New York",
-      stops: "Jammu Hospital",
-      assignedDriver: "David M.",
-      eta: "8:52 AM",
-      activeDays: "Mon-Fri",
-      status: "Archive",
-    },
-    {
-      no: 10,
-      routeName: "Route B - North Bergen",
-      startLocation: "20 Cooper Square, New York",
-      endLocation: "47 W 13th St, New York",
-      stops: "Oxford Hospital",
-      assignedDriver: "Carla G.",
-      eta: "8:52 AM",
-      activeDays: "Sat only",
-      status: "Completed",
-    },
-  ];
+  useEffect(() => {
+    dispatch(fetchRoutes({ page: currentPage, limit }));
+  }, [dispatch, currentPage, limit]);
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  useEffect(() => {
+    dispatch(fetchDrivers());
+  }, []);
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingRoute(null);
+    setSelectedRouteData(null);
   };
 
   const openAddModal = () => {
     setEditingRoute(null);
-    setFormData({
-      routeName: "",
-      startAddress: "",
-      startCity: "",
-      startState: "",
-      startZipcode: "",
-      endAddress: "",
-      endCity: "",
-      endState: "",
-      endZipcode: "",
-      stops: "",
-      assignedDriver: "",
-      eta: "",
-      activeDays: "",
-      status: "",
-    });
+    setSelectedRouteData(null);
     setShowModal(true);
+  };
+
+  const fetchRouteDetails = (id) => {
+    loader(true);
+    Api("GET", `/route/${id}`)
+      .then((res) => {
+        if (res?.status) {
+          setSelectedRouteData(res.data);
+        }
+      })
+      .catch((err) => {
+        toast.error(
+          err?.message || "Failed to fetch route details. Please try again."
+        );
+      })
+      .finally(() => {
+        loader(false);
+      });
   };
 
   const openEditModal = (route) => {
     setEditingRoute(route);
-
-    // Parse start location to extract address and city
-    const startLocationParts = route.startLocation.split(",");
-    const startAddress = startLocationParts[0]?.trim() || "";
-    const startCity = startLocationParts[1]?.trim() || "";
-
-    // Parse end location to extract address and city
-    const endLocationParts = route.endLocation.split(",");
-    const endAddress = endLocationParts[0]?.trim() || "";
-    const endCity = endLocationParts[1]?.trim() || "";
-
-    setFormData({
-      routeName: route.routeName || "",
-      startAddress: startAddress,
-      startCity: startCity,
-      startState: startCity === "New York" ? "NY" : "",
-      startZipcode: "",
-      endAddress: endAddress,
-      endCity: endCity,
-      endState: endCity === "New York" ? "NY" : "",
-      endZipcode: "",
-      stops: route.stops || "",
-      assignedDriver: route.assignedDriver || "",
-      eta: route.eta || "",
-      activeDays: route.activeDays || "",
-      status: route.status || "",
-    });
-    setShowModal(true);
+    setSelectedRouteData(route); // Use the route data directly first
+    setShowModal(true); // Show modal immediately
+    fetchRouteDetails(route._id); // Then fetch detailed data in background
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Handle form submission here
-    setShowModal(false);
+  const handleFormSubmit = async (values, { setSubmitting, resetForm }) => {
+    try {
+      loader(true);
+
+      // Transform form data to match backend API structure
+      const transformedData = {
+        routeName: values.routeName,
+        startLocation: {
+          address: values.startAddress,
+          city: values.startCity,
+          state: values.startState,
+          zipCode: values.startZipcode,
+        },
+        endLocation: {
+          address: values.endAddress,
+          city: values.endCity,
+          state: values.endState,
+          zipCode: values.endZipcode,
+        },
+        stops: values.stops
+          .split(",")
+          .map((stop) => stop.trim())
+          .filter((stop) => stop),
+        assignedDriver: values.assignedDriver,
+        eta: values.eta,
+        activeDays: values.activeDays
+          .split(",")
+          .map((day) => day.trim())
+          .filter((day) => day),
+        status: values.status,
+      };
+
+      const method = editingRoute ? "PUT" : "POST";
+      const url = editingRoute ? `/route/${editingRoute._id}` : "/route/create";
+
+      const response = await Api(method, url, transformedData);
+
+      if (response?.status || response?.success) {
+        toast.success(
+          editingRoute
+            ? "Route updated successfully!"
+            : "Route created successfully!"
+        );
+        resetForm();
+        closeModal();
+        dispatch(fetchRoutes({ page: currentPage, limit }));
+      } else {
+        throw new Error(response?.message || "Failed to save route");
+      }
+    } catch (err) {
+      console.error("Form submission error:", err);
+      toast.error(err?.message || "Failed to save route. Please try again.");
+    } finally {
+      setSubmitting(false);
+      loader(false);
+    }
+  };
+
+  const handleDeleteRoute = async (routeId) => {
+    if (!routeId) return;
+
+    // const confirmDelete = window.confirm(
+    //   "Are you sure you want to delete this route? This action cannot be undone."
+    // );
+
+    // if (!confirmDelete) return;
+
+    try {
+      loader(true);
+      const response = await Api("DELETE", `/route/${routeId}`);
+
+      if (response?.status || response?.success) {
+        toast.success("Route deleted successfully!");
+        dispatch(fetchRoutes({ page: currentPage, limit }));
+      } else {
+        throw new Error(response?.message || "Failed to delete route");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error(err?.message || "Failed to delete route. Please try again.");
+    } finally {
+      loader(false);
+    }
   };
 
   const toggleDropdown = (index) => {
@@ -233,6 +236,10 @@ function RoutesSchedules() {
 
   const handleClickOutside = () => {
     setActiveDropdown(null);
+  };
+
+  const handlePageChange = (event) => {
+    setCurrentPage(event.page + 1);
   };
 
   const getStatusBadge = (status) => {
@@ -259,6 +266,8 @@ function RoutesSchedules() {
       icon: <Eye className="w-5 h-5 text-gray-500" />,
       command: () => {
         console.log("View clicked", row);
+        setViewModal(true);
+        fetchRouteDetails(row._id);
       },
     },
     {
@@ -274,6 +283,7 @@ function RoutesSchedules() {
       icon: <Trash className="w-5 h-5 text-gray-500" />,
       command: () => {
         console.log("Delete clicked", row);
+        handleDeleteRoute(row._id);
       },
     },
   ];
@@ -283,13 +293,17 @@ function RoutesSchedules() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    loader(loading);
+  }, [loading, loader]);
+
   return (
     <Layout title="All Routes & Schedules">
       {/* Main Content */}
       <div className="bg-white shadow-sm overflow-hidden rounded-lg">
         {/* Add New Button */}
         <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-           <span className="text-lg font-semibold text-gray-900">
+          <span className="text-lg font-semibold text-gray-900">
             All Routes
           </span>
           <button
@@ -307,16 +321,15 @@ function RoutesSchedules() {
           tableStyle={{ minWidth: "50rem" }}
           rowClassName={() => "hover:bg-gray-50"}
           size="small"
-          // style={{ overflow: "visible" }}
-          // scrollable={false}
-          // columnResizeMode="expand"
-          // resizableColumns
           paginator
-          rows={10}
-          // rowsPerPageOptions={[5, 10, 25, 50]}
+          rows={limit}
+          totalRecords={totalPages}
+          first={(currentPage - 1) * limit}
+          lazy
+          onPage={handlePageChange}
         >
           <Column
-            field="no"
+            field="index"
             header="No."
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
@@ -333,21 +346,37 @@ function RoutesSchedules() {
             field="startLocation"
             header="Start Location"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span>{rowData?.startLocation?.address || "N/A"}</span>
+            )}
           />
           <Column
             field="endLocation"
             header="End Location"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span>{rowData?.endLocation?.address || "N/A"}</span>
+            )}
           />
           <Column
             field="stops"
             header="Stops"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span>{rowData.stops ? rowData.stops.join(", ") : "N/A"}</span>
+            )}
           />
           <Column
             field="assignedDriver"
             header="Assigned Driver"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span>
+                {rowData.assignedDriver
+                  ? rowData.assignedDriver.name || "N/A"
+                  : "N/A"}
+              </span>
+            )}
           />
           <Column
             field="eta"
@@ -358,6 +387,11 @@ function RoutesSchedules() {
             field="activeDays"
             header="Active Days"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span>
+                {rowData.activeDays ? rowData.activeDays.join(", ") : "N/A"}
+              </span>
+            )}
           />
           <Column
             field="status"
@@ -410,9 +444,7 @@ function RoutesSchedules() {
                   : "Add Routes & Schedules"}
               </h2>
               <button
-                onClick={() => {
-                  setShowModal(false);
-                }}
+                onClick={closeModal}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-6 h-6" />
@@ -420,239 +452,611 @@ function RoutesSchedules() {
             </div>
 
             {/* Modal Content */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {/* Route Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Route Name
-                </label>
-                <input
-                  type="text"
-                  name="routeName"
-                  value={formData.routeName}
-                  onChange={handleInputChange}
-                  placeholder="Route Name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                />
-              </div>
-
-              {/* Start Location */}
-              <div>
-                <label className="block text-sm font-bold text-[#003C72] mb-2">
-                  Start Location
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Formik
+              initialValues={
+                editingRoute
+                  ? {
+                      routeName:
+                        selectedRouteData?.routeName ||
+                        editingRoute?.routeName ||
+                        "",
+                      startAddress:
+                        selectedRouteData?.startLocation?.address ||
+                        editingRoute?.startLocation?.address ||
+                        "",
+                      startCity:
+                        selectedRouteData?.startLocation?.city ||
+                        editingRoute?.startLocation?.city ||
+                        "",
+                      startState:
+                        selectedRouteData?.startLocation?.state ||
+                        editingRoute?.startLocation?.state ||
+                        "",
+                      startZipcode:
+                        selectedRouteData?.startLocation?.zipCode ||
+                        editingRoute?.startLocation?.zipCode ||
+                        "",
+                      endAddress:
+                        selectedRouteData?.endLocation?.address ||
+                        editingRoute?.endLocation?.address ||
+                        "",
+                      endCity:
+                        selectedRouteData?.endLocation?.city ||
+                        editingRoute?.endLocation?.city ||
+                        "",
+                      endState:
+                        selectedRouteData?.endLocation?.state ||
+                        editingRoute?.endLocation?.state ||
+                        "",
+                      endZipcode:
+                        selectedRouteData?.endLocation?.zipCode ||
+                        editingRoute?.endLocation?.zipCode ||
+                        "",
+                      stops: selectedRouteData?.stops
+                        ? selectedRouteData.stops.join(", ")
+                        : editingRoute?.stops
+                        ? editingRoute.stops.join(", ")
+                        : "",
+                      assignedDriver:
+                        selectedRouteData?.assignedDriver?._id ||
+                        editingRoute?.assignedDriver?._id ||
+                        selectedRouteData?.assignedDriver ||
+                        editingRoute?.assignedDriver ||
+                        "",
+                      eta: selectedRouteData?.eta || editingRoute?.eta || "",
+                      activeDays: selectedRouteData?.activeDays
+                        ? selectedRouteData.activeDays.join(", ")
+                        : editingRoute?.activeDays
+                        ? editingRoute.activeDays.join(", ")
+                        : "",
+                      status:
+                        selectedRouteData?.status || editingRoute?.status || "",
+                    }
+                  : initialValues
+              }
+              validationSchema={validationSchema}
+              onSubmit={handleFormSubmit}
+              enableReinitialize={true}
+            >
+              {({ isSubmitting, touched, errors, setFieldValue, values }) => (
+                <Form className="p-6 space-y-6">
+                  {/* Route Name */}
                   <div>
-                    <input
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Route Name *
+                    </label>
+                    <Field
                       type="text"
-                      name="startAddress"
-                      value={formData.startAddress}
-                      onChange={handleInputChange}
-                      placeholder="Address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      name="routeName"
+                      placeholder="Enter route name"
+                      className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                        touched.routeName && errors.routeName
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                    />
+                    <ErrorMessage
+                      name="routeName"
+                      component="div"
+                      className="text-red-500 text-sm mt-1"
                     />
                   </div>
+
+                  {/* Start Location */}
                   <div>
-                    <select
-                      name="startCity"
-                      value={formData.startCity}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                    <label className="block text-sm font-bold text-[#003C72] mb-2">
+                      Start Location
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <Field
+                          type="text"
+                          name="startAddress"
+                          placeholder="Address *"
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.startAddress && errors.startAddress
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        />
+                        <ErrorMessage
+                          name="startAddress"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Field
+                          as="select"
+                          name="startCity"
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.startCity && errors.startCity
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          <option value="">Select City *</option>
+                          <option value="New York">New York</option>
+                          <option value="Los Angeles">Los Angeles</option>
+                          <option value="Chicago">Chicago</option>
+                        </Field>
+                        <ErrorMessage
+                          name="startCity"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Field
+                          as="select"
+                          name="startState"
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.startState && errors.startState
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          <option value="">Select State *</option>
+                          <option value="NY">New York</option>
+                          <option value="CA">California</option>
+                          <option value="IL">Illinois</option>
+                        </Field>
+                        <ErrorMessage
+                          name="startState"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Field
+                          type="text"
+                          name="startZipcode"
+                          placeholder="Zipcode *"
+                          maxLength={5}
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.startZipcode && errors.startZipcode
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        />
+                        <ErrorMessage
+                          name="startZipcode"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* End Location */}
+                  <div>
+                    <label className="block text-sm font-bold text-[#003C72] mb-2">
+                      End Location
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div>
+                        <Field
+                          type="text"
+                          name="endAddress"
+                          placeholder="Address *"
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.endAddress && errors.endAddress
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        />
+                        <ErrorMessage
+                          name="endAddress"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Field
+                          as="select"
+                          name="endCity"
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.endCity && errors.endCity
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          <option value="">Select City *</option>
+                          <option value="New York">New York</option>
+                          <option value="Los Angeles">Los Angeles</option>
+                          <option value="Chicago">Chicago</option>
+                        </Field>
+                        <ErrorMessage
+                          name="endCity"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Field
+                          as="select"
+                          name="endState"
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.endState && errors.endState
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          <option value="">Select State *</option>
+                          <option value="NY">New York</option>
+                          <option value="CA">California</option>
+                          <option value="IL">Illinois</option>
+                        </Field>
+                        <ErrorMessage
+                          name="endState"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Field
+                          type="text"
+                          name="endZipcode"
+                          placeholder="Zipcode *"
+                          maxLength={5}
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.endZipcode && errors.endZipcode
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        />
+                        <ErrorMessage
+                          name="endZipcode"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    {/* Stops */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Stops *
+                      </label>
+                      <Field
+                        as="select"
+                        name="stops"
+                        className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                          touched.stops && errors.stops
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                      >
+                        <option value="">Select Stops</option>
+                        <option
+                          value="Jammu Hospital"
+                          selected={values.stops === "Jammu Hospital"}
+                        >
+                          Jammu Hospital
+                        </option>
+                        <option
+                          value="Capitol Hospital"
+                          selected={values.stops === "Capitol Hospital"}
+                        >
+                          Capitol Hospital
+                        </option>
+                        <option
+                          value="Bellevue Hospital"
+                          selected={values.stops === "Bellevue Hospital"}
+                        >
+                          Bellevue Hospital
+                        </option>
+                        <option
+                          value="Oxford Hospital"
+                          selected={values.stops === "Oxford Hospital"}
+                        >
+                          Oxford Hospital
+                        </option>
+                        <option
+                          value="Jim Pharmacy"
+                          selected={values.stops === "Jim Pharmacy"}
+                        >
+                          Jim Pharmacy
+                        </option>
+                      </Field>
+                      <ErrorMessage
+                        name="stops"
+                        component="div"
+                        className="text-red-500 text-xs mt-1"
+                      />
+                    </div>
+
+                    {/* Assigned Driver */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Assigned Driver *
+                      </label>
+                      <Field
+                        as="select"
+                        name="assignedDriver"
+                        className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                          touched.assignedDriver && errors.assignedDriver
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                      >
+                        <option value="">Select Assigned Driver</option>
+                        {drivers.map((driver) => (
+                          <option
+                            key={driver._id}
+                            value={driver.driver._id}
+                            selected={
+                              driver.driver._id === values.assignedDriver._id
+                            }
+                          >
+                            {driver.driver.name}
+                          </option>
+                        ))}
+                      </Field>
+                      <ErrorMessage
+                        name="assignedDriver"
+                        component="div"
+                        className="text-red-500 text-xs mt-1"
+                      />
+                    </div>
+
+                    {/* ETA */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        ETA *
+                      </label>
+                      <div className="relative">
+                        <Field
+                          type="text"
+                          name="eta"
+                          placeholder="2:10 PM"
+                          className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.eta && errors.eta
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
+                        />
+                        <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      </div>
+                      <ErrorMessage
+                        name="eta"
+                        component="div"
+                        className="text-red-500 text-xs mt-1"
+                      />
+                    </div>
+
+                    {/* Active Days */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Active Days *
+                      </label>
+                      <Field
+                        as="select"
+                        name="activeDays"
+                        className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                          touched.activeDays && errors.activeDays
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                      >
+                        <option value="">Select Active Days</option>
+                        <option value="Mon">Monday</option>
+                        <option value="Tue">Tuesday</option>
+                        <option value="Wed">Wednesday</option>
+                        <option value="Thu">Thursday</option>
+                        <option value="Fri">Friday</option>
+                        <option value="Sat">Saturday</option>
+                        <option value="Sun">Sunday</option>
+                      </Field>
+                      <ErrorMessage
+                        name="activeDays"
+                        component="div"
+                        className="text-red-500 text-xs mt-1"
+                      />
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Status *
+                      </label>
+                      <Field
+                        as="select"
+                        name="status"
+                        className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                          touched.status && errors.status
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        }`}
+                      >
+                        <option value="">Select Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Archive">Archive</option>
+                      </Field>
+                      <ErrorMessage
+                        name="status"
+                        component="div"
+                        className="text-red-500 text-xs mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="flex justify-end pt-6 gap-3">
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="bg-gray-500 text-white px-6 py-2 rounded-md font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                      disabled={isSubmitting}
                     >
-                      <option value="">Select City</option>
-                      <option value="New York">New York</option>
-                      <option value="Los Angeles">Los Angeles</option>
-                      <option value="Chicago">Chicago</option>
-                    </select>
-                  </div>
-                  <div>
-                    <select
-                      name="startState"
-                      value={formData.startState}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="bg-secondary text-white px-6 py-2 rounded-md font-medium hover:secondary focus:outline-none focus:ring-2 focus:secondary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <option value="">Select State</option>
-                      <option value="NY">New York</option>
-                      <option value="CA">California</option>
-                      <option value="IL">Illinois</option>
-                    </select>
+                      {isSubmitting
+                        ? "Submitting..."
+                        : editingRoute
+                        ? "Update Route"
+                        : "Create Route"}
+                    </button>
                   </div>
-                  <div>
-                    <input
-                      type="text"
-                      name="startZipcode"
-                      value={formData.startZipcode}
-                      onChange={handleInputChange}
-                      placeholder="Zipcode"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                    />
+                </Form>
+              )}
+            </Formik>
+          </div>
+        </div>
+      )}
+
+      {viewModal && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Order Details
+              </h2>
+              <button
+                onClick={() => {
+                  setViewModal(false);
+                  setSelectedRowData(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <div className="bg-white">
+                <dl className="w-full grid grid-cols-6 gap-4">
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Route Name
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData.routeName || "N/A"}
+                    </dd>
                   </div>
-                </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Assigned Driver
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData.assignedDriver.name || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">Stops</dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {Array.isArray(selectedRowData.stops)
+                        ? selectedRowData.stops.join(", ")
+                        : selectedRowData.stops || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Active Days
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0">
+                      {Array.isArray(selectedRowData.activeDays)
+                        ? selectedRowData.activeDays.join(", ")
+                        : selectedRowData.activeDays || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">ETA</dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData.eta || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Status
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData.status || "N/A"}
+                    </dd>
+                  </div>
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-2">
+                    Start Location
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Address
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.startLocation?.address || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      City
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.startLocation?.city || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      State
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.startLocation?.state || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Zipcode
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.startLocation?.zipCode || "N/A"}
+                    </dd>
+                  </div>
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    End Location
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Address
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.endLocation?.address || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      City
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.endLocation?.city || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      State
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.endLocation?.state || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Zipcode
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.endLocation?.zipCode || "N/A"}
+                    </dd>
+                  </div>
+                </dl>
               </div>
 
-              {/* End Location */}
-              <div>
-                <label className="block text-sm font-bold text-[#003C72] mb-2">
-                  End Location
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <input
-                      type="text"
-                      name="endAddress"
-                      value={formData.endAddress}
-                      onChange={handleInputChange}
-                      placeholder="Address"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                    />
-                  </div>
-                  <div>
-                    <select
-                      name="endCity"
-                      value={formData.endCity}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                    >
-                      <option value="">Select City</option>
-                      <option value="New York">New York</option>
-                      <option value="Los Angeles">Los Angeles</option>
-                      <option value="Chicago">Chicago</option>
-                    </select>
-                  </div>
-                  <div>
-                    <select
-                      name="endState"
-                      value={formData.endState}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                    >
-                      <option value="">Select State</option>
-                      <option value="NY">New York</option>
-                      <option value="CA">California</option>
-                      <option value="IL">Illinois</option>
-                    </select>
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      name="endZipcode"
-                      value={formData.endZipcode}
-                      onChange={handleInputChange}
-                      placeholder="Zipcode"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                {/* Stops */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Stops
-                  </label>
-                  <select
-                    name="stops"
-                    value={formData.stops}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                  >
-                    <option value="">Select Stops</option>
-                    <option value="Jammu Hospital">Jammu Hospital</option>
-                    <option value="Capitol Hospital">Capitol Hospital</option>
-                    <option value="Bellevue Hospital">Bellevue Hospital</option>
-                    <option value="Oxford Hospital">Oxford Hospital</option>
-                    <option value="Jim Pharmacy">Jim Pharmacy</option>
-                  </select>
-                </div>
-
-                {/* Assigned Driver */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assigned Driver
-                  </label>
-                  <select
-                    name="assignedDriver"
-                    value={formData.assignedDriver}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                  >
-                    <option value="">Select Assigned Driver</option>
-                    <option value="David M.">David M.</option>
-                    <option value="Carla G.">Carla G.</option>
-                    <option value="David J.">David J.</option>
-                    <option value="Catrin D.">Catrin D.</option>
-                  </select>
-                </div>
-
-                {/* ETA */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ETA
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="eta"
-                      value={formData.eta}
-                      onChange={handleInputChange}
-                      placeholder="2:10 PM"
-                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                    />
-                    <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  </div>
-                </div>
-
-                {/* Active Days */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Active Days
-                  </label>
-                  <select
-                    name="activeDays"
-                    value={formData.activeDays}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                  >
-                    <option value="">Select Active Days</option>
-                    <option value="Mon-Fri">Mon-Fri</option>
-                    <option value="Sat only">Sat only</option>
-                    <option value="Sun only">Sun only</option>
-                    <option value="Mon-Sun">Mon-Sun</option>
-                  </select>
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                  >
-                    <option value="">Select Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Archive">Archive</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <div className="flex justify-end pt-6">
-                <button
-                  type="submit"
-                  className="bg-secondary text-white px-6 py-2 rounded-md font-medium hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2"
-                >
-                  Submit
-                </button>
-              </div>
-            </form>
+              {/* Additional details can be added here */}
+            </div>
           </div>
         </div>
       )}

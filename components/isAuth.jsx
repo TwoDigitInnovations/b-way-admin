@@ -35,11 +35,12 @@ const isAuth = (Component) => {
         "/compliance-report",
         "/settings",
         "/change-password",
+        "/account-info",
         "/admin-only",
       ],
-      USER: ["/dashboardv", "/ordersv", "/allroutes", "/settings", "/change-password"],
-      DRIVER: ["/dashboardv", "/ordersv", "/my-deliveries", "/change-password"],
-      DISPATCHER: ["/dashboardv", "/ordersv", "/settings", "/billing-invoices", "/change-password"],
+      USER: ["/dashboardv", "/ordersv", "/allroutes", "/settings", "/change-password", "/account-info"],
+      DRIVER: ["/dashboardv", "/ordersv", "/my-deliveries", "/change-password", "/account-info"],
+      DISPATCHER: ["/dashboardv", "/ordersv", "/settings", "/billing-invoices", "/change-password", "/account-info"],
     };
 
     const currentRoute = router?.pathname;

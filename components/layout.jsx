@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { LogOut } from "lucide-react";
 import Sidebar from "./sidebar";
 import { userContext } from '@/pages/_app';
+import LiveClock from './LiveClock';
 
 export default function Layout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -53,6 +54,8 @@ export default function Layout({ children, title }) {
 
             <div className="flex items-center space-x-4">
               {/* Search */}
+                <LiveClock />
+
               <div className="relative hidden sm:block">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input

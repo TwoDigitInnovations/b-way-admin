@@ -21,6 +21,7 @@ import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
 import isAuth from "@/components/isAuth";
+import { Api } from "@/helper/service";
 
 // Add/Edit Modal Component
 function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
@@ -296,7 +297,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
 }
 
 // Main Component
-function HospitalsFacilities() {
+function HospitalsFacilities({loader}) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -306,108 +307,7 @@ function HospitalsFacilities() {
   const menuRef = useRef(null);
   const [selectedRowData, setSelectedRowData] = useState(null);
 
-  const [facilities, setFacilities] = useState([
-    {
-      no: 1,
-      hospitalName: "Jammu Hospital",
-      address: "47 W 13th St, New York",
-      contactPerson: "David M.",
-      phone: "000-000-0000",
-      assignedRoute: "David M.",
-      deliveryWindow: "2PM-6PM",
-      type: "Hospital",
-    },
-    {
-      no: 2,
-      hospitalName: "Columbia Peds",
-      address: "20 Cooper Square, New York",
-      contactPerson: "Carla G.",
-      phone: "000-000-0000",
-      assignedRoute: "Carla G.",
-      deliveryWindow: "2PM-6PM",
-      type: "Pharmacy",
-    },
-    {
-      no: 3,
-      hospitalName: "Oxford Hospital",
-      address: "47 W 13th St, New York",
-      contactPerson: "David M.",
-      phone: "000-000-0000",
-      assignedRoute: "David J.",
-      deliveryWindow: "2PM-6PM",
-      type: "Clinic",
-    },
-    {
-      no: 4,
-      hospitalName: "Jammu Hospital",
-      address: "20 Cooper Square, New York",
-      contactPerson: "Carla G.",
-      phone: "000-000-0000",
-      assignedRoute: "Catrin D.",
-      deliveryWindow: "2PM-6PM",
-      type: "Hospital",
-    },
-    {
-      no: 5,
-      hospitalName: "Bellevue Hospital",
-      address: "47 W 13th St, New York",
-      contactPerson: "David M.",
-      phone: "000-000-0000",
-      assignedRoute: "David M.",
-      deliveryWindow: "2PM-6PM",
-      type: "Pharmacy",
-    },
-    {
-      no: 6,
-      hospitalName: "Retarice Lospit",
-      address: "20 Cooper Square, New York",
-      contactPerson: "Carla G.",
-      phone: "000-000-0000",
-      assignedRoute: "Carla G.",
-      deliveryWindow: "2PM-6PM",
-      type: "Clinic",
-    },
-    {
-      no: 7,
-      hospitalName: "Oxford Hospital",
-      address: "47 W 13th St, New York",
-      contactPerson: "David M.",
-      phone: "000-000-0000",
-      assignedRoute: "David J.",
-      deliveryWindow: "2PM-6PM",
-      type: "Hospital",
-    },
-    {
-      no: 8,
-      hospitalName: "Jammu Hospital",
-      address: "20 Cooper Square, New York",
-      contactPerson: "Carla G.",
-      phone: "000-000-0000",
-      assignedRoute: "Catrin D.",
-      deliveryWindow: "2PM-6PM",
-      type: "Pharmacy",
-    },
-    {
-      no: 9,
-      hospitalName: "NYU Langone",
-      address: "47 W 13th St, New York",
-      contactPerson: "David M.",
-      phone: "000-000-0000",
-      assignedRoute: "David M.",
-      deliveryWindow: "2PM-6PM",
-      type: "Clinic",
-    },
-    {
-      no: 10,
-      hospitalName: "Columbia Peds",
-      address: "20 Cooper Square, New York",
-      contactPerson: "Carla G.",
-      phone: "000-000-0000",
-      assignedRoute: "Carla G.",
-      deliveryWindow: "2PM-6PM",
-      type: "Hospital",
-    },
-  ]);
+  const [facilities, setFacilities] = useState([]);
 
   const toggleDropdown = (index) => {
     setActiveDropdown(activeDropdown === index ? null : index);
@@ -478,6 +378,24 @@ function HospitalsFacilities() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    loader(true);
+    Api("GET", "/auth/USER")
+      .then((response) => {
+        if (response.status) {
+          setFacilities(response.data);
+        } else {
+          console.error("Failed to fetch facilities:", response.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching facilities:", error);
+      })
+      .finally(() => {
+        loader(false);
+      });
+  }, []);
+
   return (
     <Layout title="All Hospitals & Facilities">
       {/* Main Content */}
@@ -512,12 +430,12 @@ function HospitalsFacilities() {
           // rowsPerPageOptions={[5, 10, 25, 50]}
         >
           <Column
-            field="no"
+            field="index"
             header="No."
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="hospitalName"
+            field="name"
             header="Hospital Name"
             bodyStyle={{
               color: "#F97316",
@@ -531,7 +449,7 @@ function HospitalsFacilities() {
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
-            field="contactPerson"
+            field="primaryContact"
             header="Contact Person"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
@@ -544,18 +462,28 @@ function HospitalsFacilities() {
             field="assignedRoute"
             header="Assigned Route"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span className="text-gray-600">
+                {rowData.assignedRoute || "N/A"}
+              </span>
+            )}
           />
           <Column
             field="deliveryWindow"
             header="Delivery Window"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span className="text-gray-600">
+                {rowData.deliveryWindow || "2AM - 6PM"}
+              </span>
+            )}
           />
-          <Column
+          {/* <Column
             field="type"
             header="Type"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             // body={(rowData) => getStatusBadge(rowData.type)}
-          />
+          /> */}
           <Column
             header="Action"
             bodyStyle={{

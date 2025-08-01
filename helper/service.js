@@ -25,10 +25,10 @@ function Api(method, url, data, router, params) {
         console.log(err);
         if (err.response) {
           if (err?.response?.status === 401) {
-            // if (typeof window !== "undefined") {
-            //   localStorage.removeItem("userDetail");
-            //   router?.push("/");
-            // }
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("userDetail");
+              router?.push("/");
+            }
             console.error("Unauthorized access - redirecting to login");
           }
           reject(err.response.data);

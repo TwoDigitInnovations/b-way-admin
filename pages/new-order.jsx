@@ -5,8 +5,6 @@ import itemsData from "../utils/items.json";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchRoutes } from "@/store/routeSlice";
-import { fetchDrivers } from "@/store/driverSlice";
 import { Api } from "@/helper/service";
 import { useRouter } from "next/router";
 import toast from "react-hot-toast";
@@ -15,90 +13,84 @@ export default function NewOrder({ loader }) {
   const [items, setItems] = useState(itemsData);
   const dispatch = useDispatch();
   const router = useRouter();
-  const { routes, assignedRoute, loading } = useSelector(
-    (state) => state.route
-  );
-  const { drivers, assignedDriver } = useSelector((state) => state.driver);
-
-  console.log("Routes:", routes);
-  console.log("Drivers:", drivers);
-
-  useEffect(() => {
-    dispatch(fetchRoutes());
-    dispatch(fetchDrivers());
-  }, [dispatch]);
 
   const validationSchema = Yup.object({
     items: Yup.string().required("Item(s) is required"),
     qty: Yup.number()
       .required("Quantity is required")
       .min(1, "Must be at least 1"),
-    pickupLocation: Yup.string().required("Pickup address is required"),
-    pickupCity: Yup.string().required("Pickup city is required"),
-    pickupState: Yup.string().required("Pickup state is required"),
-    pickupZipcode: Yup.string().required("Pickup zipcode is required"),
-    deliveryLocation: Yup.string().required("Delivery address is required"),
-    deliveryCity: Yup.string().required("Delivery city is required"),
-    deliveryState: Yup.string().required("Delivery state is required"),
-    deliveryZipcode: Yup.string().required("Delivery zipcode is required"),
-    assignedDriver: Yup.string().required("Assigned driver is required"),
-    route: Yup.string().required("Route is required"),
-    eta: Yup.string().required("ETA is required"),
+    pickupLocation: Yup.object({
+      address: Yup.string().required("Pickup address is required"),
+      city: Yup.string().required("Pickup city is required"),
+      state: Yup.string().required("Pickup state is required"),
+      zipcode: Yup.string()
+      .matches(/^\d{5}$/, "Pickup zipcode must be exactly 5 digits")
+      .required("Pickup zipcode is required"),
+    }),
+    deliveryLocation: Yup.object({
+      address: Yup.string().required("Delivery address is required"),
+      city: Yup.string().required("Delivery city is required"),
+      state: Yup.string().required("Delivery state is required"),
+      zipcode: Yup.string()
+      .matches(/^\d{5}$/, "Delivery zipcode must be exactly 5 digits")
+      .required("Delivery zipcode is required"),
+    }),
   });
 
   const initialValues = {
     items: "",
     qty: "",
-    pickupLocation: "",
-    pickupCity: "",
-    pickupState: "",
-    pickupZipcode: "",
-    deliveryLocation: "",
-    deliveryCity: "",
-    deliveryState: "",
-    deliveryZipcode: "",
-    assignedDriver: "",
-    route: "",
-    eta: "",
+    pickupLocation: {
+      address: "",
+      city: "",
+      state: "",
+      zipcode: "",
+    },
+    deliveryLocation: {
+      address: "",
+      city: "",
+      state: "",
+      zipcode: "",
+    },
   };
 
-  const handleSubmit = (values) => {
+  const handleSubmit = (values, { resetForm }) => {
     console.log("Form submitted with values:", values);
     loader(true);
+    
+    // Transform the data to match backend expectations
+    const orderData = {
+      items: values.items,
+      qty: values.qty,
+      pickupLocation: values.pickupLocation.address,
+      pickupCity: values.pickupLocation.city,
+      pickupState: values.pickupLocation.state,
+      pickupZipcode: values.pickupLocation.zipcode,
+      deliveryLocation: values.deliveryLocation.address,
+      deliveryCity: values.deliveryLocation.city,
+      deliveryState: values.deliveryLocation.state,
+      deliveryZipcode: values.deliveryLocation.zipcode,
+    };
+
     Api(
       "POST",
       "/order/create",
-      {
-        ...values,
-      },
+      orderData,
       router
     )
       .then((response) => {
         console.log("Order created successfully:", response);
         if (response?.status) {
           toast.success("Order created successfully!");
-
+          resetForm(); // Properly reset the form using Formik's resetForm
           //   router.push("/ordersv");
-          // clear form values
-          values.items = "";
-          values.qty = "";
-          values.pickupLocation = "";
-          values.pickupCity = "";
-          values.pickupState = "";
-          values.pickupZipcode = "";
-          values.deliveryLocation = "";
-          values.deliveryCity = "";
-          values.deliveryState = "";
-          values.deliveryZipcode = "";
-          values.assignedDriver = "";
-          values.route = "";
-          values.eta = "";
         } else {
           toast.error("Failed to create order. Please try again.");
         }
       })
       .catch((error) => {
         console.error("Error submitting form:", error);
+        toast.error("An error occurred while creating the order.");
       })
       .finally(() => {
         loader(false);
@@ -166,31 +158,8 @@ export default function NewOrder({ loader }) {
                       {errors.qty && touched.qty && errors.qty}
                     </span>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Route
-                    </label>
-                    <select
-                      name="route"
-                      value={values.route}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                    >
-                      <option value="">Select Route</option>
-                      {routes.map((route) => (
-                        <option key={route._id} value={route._id}>
-                          {route.routeName}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="text-sm text-red-600">
-                      {errors.route && touched.route && errors.route}
-                    </span>
-                  </div>
                 </div>
 
-                {/* Pickup Location Section */}
                 <div className="mb-6">
                   <h3 className="text-md font-semibold text-[#003C72] mb-3">
                     Pickup Location
@@ -202,16 +171,16 @@ export default function NewOrder({ loader }) {
                       </label>
                       <input
                         type="text"
-                        name="pickupLocation"
-                        value={values.pickupLocation}
+                        name="pickupLocation.address"
+                        value={values.pickupLocation.address}
                         onChange={handleChange}
                         placeholder="Address"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                       />
                       <span className="text-sm text-red-600">
-                        {errors.pickupLocation &&
-                          touched.pickupLocation &&
-                          errors.pickupLocation}
+                        {errors.pickupLocation?.address &&
+                          touched.pickupLocation?.address &&
+                          errors.pickupLocation.address}
                       </span>
                     </div>
                     <div>
@@ -219,8 +188,8 @@ export default function NewOrder({ loader }) {
                         City
                       </label>
                       <select
-                        name="pickupCity"
-                        value={values.pickupCity}
+                        name="pickupLocation.city"
+                        value={values.pickupLocation.city}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                       >
@@ -228,9 +197,9 @@ export default function NewOrder({ loader }) {
                         <option value="New York">New York</option>
                       </select>
                       <span className="text-sm text-red-600">
-                        {errors.pickupCity &&
-                          touched.pickupCity &&
-                          errors.pickupCity}
+                        {errors.pickupLocation?.city &&
+                          touched.pickupLocation?.city &&
+                          errors.pickupLocation.city}
                       </span>
                     </div>
                     <div>
@@ -238,8 +207,8 @@ export default function NewOrder({ loader }) {
                         State
                       </label>
                       <select
-                        name="pickupState"
-                        value={values.pickupState}
+                        name="pickupLocation.state"
+                        value={values.pickupLocation.state}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                       >
@@ -247,9 +216,9 @@ export default function NewOrder({ loader }) {
                         <option value="NY">NY</option>
                       </select>
                       <span className="text-sm text-red-600">
-                        {errors.pickupState &&
-                          touched.pickupState &&
-                          errors.pickupState}
+                        {errors.pickupLocation?.state &&
+                          touched.pickupLocation?.state &&
+                          errors.pickupLocation.state}
                       </span>
                     </div>
                     <div>
@@ -259,15 +228,16 @@ export default function NewOrder({ loader }) {
                       <input
                         type="text"
                         placeholder="Zipcode"
-                        name="pickupZipcode"
-                        value={values.pickupZipcode}
+                        name="pickupLocation.zipcode"
+                        value={values.pickupLocation.zipcode}
                         onChange={handleChange}
+                        maxLength={5}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                       />
                       <span className="text-sm text-red-600">
-                        {errors.pickupZipcode &&
-                          touched.pickupZipcode &&
-                          errors.pickupZipcode}
+                        {errors.pickupLocation?.zipcode &&
+                          touched.pickupLocation?.zipcode &&
+                          errors.pickupLocation.zipcode}
                       </span>
                     </div>
                   </div>
@@ -286,15 +256,15 @@ export default function NewOrder({ loader }) {
                       <input
                         type="text"
                         placeholder="Address"
-                        name="deliveryLocation"
-                        value={values.deliveryLocation}
+                        name="deliveryLocation.address"
+                        value={values.deliveryLocation.address}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                       />
                       <span className="text-sm text-red-600">
-                        {errors.deliveryLocation &&
-                          touched.deliveryLocation &&
-                          errors.deliveryLocation}
+                        {errors.deliveryLocation?.address &&
+                          touched.deliveryLocation?.address &&
+                          errors.deliveryLocation.address}
                       </span>
                     </div>
                     <div>
@@ -302,8 +272,8 @@ export default function NewOrder({ loader }) {
                         City
                       </label>
                       <select
-                        name="deliveryCity"
-                        value={values.deliveryCity}
+                        name="deliveryLocation.city"
+                        value={values.deliveryLocation.city}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                       >
@@ -311,9 +281,9 @@ export default function NewOrder({ loader }) {
                         <option value="New York">New York</option>
                       </select>
                       <span className="text-sm text-red-600">
-                        {errors.deliveryCity &&
-                          touched.deliveryCity &&
-                          errors.deliveryCity}
+                        {errors.deliveryLocation?.city &&
+                          touched.deliveryLocation?.city &&
+                          errors.deliveryLocation.city}
                       </span>
                     </div>
                     <div>
@@ -321,8 +291,8 @@ export default function NewOrder({ loader }) {
                         State
                       </label>
                       <select
-                        name="deliveryState"
-                        value={values.deliveryState}
+                        name="deliveryLocation.state"
+                        value={values.deliveryLocation.state}
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                       >
@@ -331,9 +301,9 @@ export default function NewOrder({ loader }) {
                       </select>
 
                       <span className="text-sm text-red-600">
-                        {errors.deliveryState &&
-                          touched.deliveryState &&
-                          errors.deliveryState}
+                        {errors.deliveryLocation?.state &&
+                          touched.deliveryLocation?.state &&
+                          errors.deliveryLocation.state}
                       </span>
                     </div>
                     <div>
@@ -343,78 +313,19 @@ export default function NewOrder({ loader }) {
                       <input
                         type="text"
                         placeholder="Zipcode"
-                        name="deliveryZipcode"
-                        value={values.deliveryZipcode}
+                        name="deliveryLocation.zipcode"
+                        value={values.deliveryLocation.zipcode}
                         onChange={handleChange}
+                        maxLength={5}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                       />
                       <span className="text-sm text-red-600">
-                        {errors.deliveryZipcode &&
-                          touched.deliveryZipcode &&
-                          errors.deliveryZipcode}
+                        {errors.deliveryLocation?.zipcode &&
+                          touched.deliveryLocation?.zipcode &&
+                          errors.deliveryLocation.zipcode}
                       </span>
                     </div>
                   </div>
-                </div>
-
-                {/* Bottom Row - Assigned Driver, ETA, Status */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Assigned Driver
-                    </label>
-                    <select
-                      name="assignedDriver"
-                      value={values.assignedDriver}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                    >
-                      <option value="">Select Assigned Driver</option>
-                      {drivers.map((driver) => (
-                        <option key={driver._id} value={driver.driver._id}>
-                          {driver.driver.name}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="text-sm text-red-600">
-                      {errors.assignedDriver &&
-                        touched.assignedDriver &&
-                        errors.assignedDriver}
-                    </span>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ETA
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="2:10 PM"
-                        name="eta"
-                        value={values.eta}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                      />
-                      <Clock className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2" />
-                    </div>
-                    <span className="text-sm text-red-600">
-                      {errors.eta && touched.eta && errors.eta}
-                    </span>
-                  </div>
-                  {/* <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Status
-                    </label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700">
-                      <option>Select Status</option>
-                      <option>Cancelled</option>
-                      <option>Delivered</option>
-                      <option>Picked Up</option>
-                      <option>Scheduled</option>
-                      <option>Return Created</option>
-                      <option>Invoice Generated</option>
-                    </select>
-                  </div> */}
                 </div>
 
                 {/* Submit Button */}

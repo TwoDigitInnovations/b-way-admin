@@ -317,9 +317,14 @@ function Orders({ loader, user }) {
       loader(true);
     }
     try {
+      // Use user-specific endpoint for regular users, admin endpoint for admins
+      const endpoint = user?.role === "ADMIN" 
+        ? `/order?page=${currentPage}&limit=${limit}`
+        : `/order/my-orders?page=${currentPage}&limit=${limit}`;
+      
       const response = await Api(
         "GET",
-        `/order?page=${currentPage}&limit=${limit}`,
+        endpoint,
         null,
         router
       );
@@ -341,6 +346,13 @@ function Orders({ loader, user }) {
   useEffect(() => {
     fetchOrders();
   }, [currentPage, limit]);
+
+  // Refetch orders when user changes
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
 
   const handlePageChange = (event) => {
     setCurrentPage(event.page + 1);
@@ -373,7 +385,7 @@ function Orders({ loader, user }) {
       <div className="bg-white shadow-sm overflow-hidden rounded-lg">
         <div className="px-4 py-4 border-b border-gray-200 flex justify-between items-center">
           <span className="text-lg font-semibold text-gray-900">
-            All Orders
+            {user?.role === "ADMIN" ? "All Orders" : "My Orders"}
           </span>
           {/* <button className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700">
             Add New
@@ -405,6 +417,23 @@ function Orders({ loader, user }) {
               fontWeight: 500,
               verticalAlign: "middle",
               fontSize: "14px",
+            }}
+            body={(rowData) => {
+              console.log("Row data for facility name:", rowData);
+              console.log("User data:", rowData.user);
+              console.log("User role:", user?.role);
+              return (
+                <div>
+                  <div style={{ color: "#F97316", fontWeight: 500 }}>
+                    {rowData.orderId}
+                  </div>
+                  {user?.role === "ADMIN" && rowData.user && (
+                    <div style={{ fontSize: "12px", color: "#6B7280", marginTop: "2px" }}>
+                      {rowData.user.name}
+                    </div>
+                  )}
+                </div>
+              );
             }}
           />
           <Column
@@ -867,6 +896,16 @@ function Orders({ loader, user }) {
                       {selectedOrder.orderId || "N/A"}
                     </dd>
                   </div>
+                  {user?.role === "ADMIN" && selectedOrder.user && (
+                    <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                      <dt className="text-sm font-medium text-gray-500">
+                        Facility Name
+                      </dt>
+                      <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                        {selectedOrder.user.name || "N/A"}
+                      </dd>
+                    </div>
+                  )}
                   <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
                     <dt className="text-sm font-medium text-gray-500">
                       Item(s)

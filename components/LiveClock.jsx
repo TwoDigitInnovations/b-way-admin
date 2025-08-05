@@ -16,7 +16,7 @@ export default function LiveClock() {
     const interval = setInterval(() => {
       const now = moment();
       setTime({
-        clock: now.format("hh:mm:ss"),
+        clock: now.format("hh:mm"),
         meridiem: now.format("A"),
       });
     }, 1000);

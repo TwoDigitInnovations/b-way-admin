@@ -231,7 +231,7 @@ export default function Operational({
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-6 lg:mb-8">
           {/* Action Buttons - Now Vertical */}
           {user?.role === "ADMIN" && (
-            <div className="lg:col-span-1">
+            <div className="col-span-1">
               <div className="space-y-3">
                 {actionButtons.map((button, index) => {
                   const Icon = button.icon;
@@ -260,7 +260,7 @@ export default function Operational({
           )}
 
           {/* Recent Orders Table */}
-          <div className={`lg:col-span-${user?.role === "ADMIN" ? "4" : "5"}`}>
+          <div className={`col-span-${user?.role === "ADMIN" ? "4" : "5"}`}>
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <h3 className="text-base lg:text-lg font-semibold text-gray-900">

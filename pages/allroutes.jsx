@@ -33,6 +33,7 @@ import {
   selectTotal,
 } from "@/store/routeSlice";
 import { fetchDrivers } from "@/store/driverSlice";
+import { MultiSelect } from "primereact/multiselect";
 
 // Validation schema using Yup
 const validationSchema = Yup.object({
@@ -60,7 +61,7 @@ const validationSchema = Yup.object({
   stops: Yup.string().required("At least one stop is required"),
   assignedDriver: Yup.string().required("Assigned driver is required"),
   eta: Yup.string().required("ETA is required"),
-  activeDays: Yup.string().required("Active days are required"),
+  activeDays: Yup.array().min(1, "At least one active day is required"),
   status: Yup.string()
     .required("Status is required")
     .oneOf(["Active", "Completed", "Archive"], "Invalid status selected"),
@@ -80,7 +81,7 @@ const initialValues = {
   stops: "",
   assignedDriver: "",
   eta: "",
-  activeDays: "",
+  activeDays: [],
   status: "",
 };
 
@@ -170,10 +171,9 @@ function RoutesSchedules({ loader }) {
           .filter((stop) => stop),
         assignedDriver: values.assignedDriver,
         eta: values.eta,
-        activeDays: values.activeDays
-          .split(",")
-          .map((day) => day.trim())
-          .filter((day) => day),
+        activeDays: Array.isArray(values.activeDays) 
+          ? values.activeDays 
+          : values.activeDays.split(",").map((day) => day.trim()).filter((day) => day),
         status: values.status,
       };
 
@@ -373,7 +373,7 @@ function RoutesSchedules({ loader }) {
             body={(rowData) => (
               <span>
                 {rowData.assignedDriver
-                  ? rowData.assignedDriver.name || "N/A"
+                  ? rowData.assignedDriver?.driver?.name || "N/A"
                   : "N/A"}
               </span>
             )}
@@ -504,11 +504,9 @@ function RoutesSchedules({ loader }) {
                         editingRoute?.assignedDriver ||
                         "",
                       eta: selectedRouteData?.eta || editingRoute?.eta || "",
-                      activeDays: selectedRouteData?.activeDays
-                        ? selectedRouteData.activeDays.join(", ")
-                        : editingRoute?.activeDays
-                        ? editingRoute.activeDays.join(", ")
-                        : "",
+                      activeDays: selectedRouteData?.activeDays ||
+                        editingRoute?.activeDays ||
+                        [],
                       status:
                         selectedRouteData?.status || editingRoute?.status || "",
                     }
@@ -787,10 +785,8 @@ function RoutesSchedules({ loader }) {
                         {drivers.map((driver) => (
                           <option
                             key={driver._id}
-                            value={driver.driver._id}
-                            selected={
-                              driver.driver._id === values.assignedDriver._id
-                            }
+                            value={driver._id}
+                            selected={driver._id === values.assignedDriver}
                           >
                             {driver.driver.name}
                           </option>
@@ -833,24 +829,14 @@ function RoutesSchedules({ loader }) {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Active Days *
                       </label>
-                      <Field
-                        as="select"
-                        name="activeDays"
-                        className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                          touched.activeDays && errors.activeDays
-                            ? "border-red-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        <option value="">Select Active Days</option>
-                        <option value="Mon">Monday</option>
-                        <option value="Tue">Tuesday</option>
-                        <option value="Wed">Wednesday</option>
-                        <option value="Thu">Thursday</option>
-                        <option value="Fri">Friday</option>
-                        <option value="Sat">Saturday</option>
-                        <option value="Sun">Sunday</option>
-                      </Field>
+                      <MultiSelect
+                        value={values.activeDays}
+                        onChange={(e) => setFieldValue("activeDays", e.value)}
+                        options={days}
+                        optionLabel="name"
+                        placeholder="Select Active Days"
+                        maxSelectedLabels={3}
+                      />
                       <ErrorMessage
                         name="activeDays"
                         component="div"
@@ -939,7 +925,7 @@ function RoutesSchedules({ loader }) {
                       Route Name
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {selectedRowData.routeName || "N/A"}
+                      {selectedRowData?.routeName || "N/A"}
                     </dd>
                   </div>
                   <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
@@ -947,15 +933,16 @@ function RoutesSchedules({ loader }) {
                       Assigned Driver
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {selectedRowData.assignedDriver.name || "N/A"}
+                      {selectedRowData?.assignedDriver?.name || 
+                       selectedRowData?.assignedDriver?.driver?.name || "N/A"}
                     </dd>
                   </div>
                   <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
                     <dt className="text-sm font-medium text-gray-500">Stops</dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {Array.isArray(selectedRowData.stops)
+                      {Array.isArray(selectedRowData?.stops)
                         ? selectedRowData.stops.join(", ")
-                        : selectedRowData.stops || "N/A"}
+                        : selectedRowData?.stops || "N/A"}
                     </dd>
                   </div>
                   <div className="col-span-2 py-3 sm:grid sm:grid-cols-2 sm:gap-4 sm:px-6 border-b border-gray-200">
@@ -963,15 +950,15 @@ function RoutesSchedules({ loader }) {
                       Active Days
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0">
-                      {Array.isArray(selectedRowData.activeDays)
+                      {Array.isArray(selectedRowData?.activeDays)
                         ? selectedRowData.activeDays.join(", ")
-                        : selectedRowData.activeDays || "N/A"}
+                        : selectedRowData?.activeDays || "N/A"}
                     </dd>
                   </div>
                   <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
                     <dt className="text-sm font-medium text-gray-500">ETA</dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {selectedRowData.eta || "N/A"}
+                      {selectedRowData?.eta || "N/A"}
                     </dd>
                   </div>
                   <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
@@ -979,7 +966,7 @@ function RoutesSchedules({ loader }) {
                       Status
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {selectedRowData.status || "N/A"}
+                      {selectedRowData?.status || "N/A"}
                     </dd>
                   </div>
                   <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-2">
@@ -994,17 +981,13 @@ function RoutesSchedules({ loader }) {
                     </dd>
                   </div>
                   <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
-                    <dt className="text-sm font-medium text-gray-500">
-                      City
-                    </dt>
+                    <dt className="text-sm font-medium text-gray-500">City</dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {selectedRowData?.startLocation?.city || "N/A"}
                     </dd>
                   </div>
                   <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
-                    <dt className="text-sm font-medium text-gray-500">
-                      State
-                    </dt>
+                    <dt className="text-sm font-medium text-gray-500">State</dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {selectedRowData?.startLocation?.state || "N/A"}
                     </dd>
@@ -1029,17 +1012,13 @@ function RoutesSchedules({ loader }) {
                     </dd>
                   </div>
                   <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
-                    <dt className="text-sm font-medium text-gray-500">
-                      City
-                    </dt>
+                    <dt className="text-sm font-medium text-gray-500">City</dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {selectedRowData?.endLocation?.city || "N/A"}
                     </dd>
                   </div>
                   <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
-                    <dt className="text-sm font-medium text-gray-500">
-                      State
-                    </dt>
+                    <dt className="text-sm font-medium text-gray-500">State</dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {selectedRowData?.endLocation?.state || "N/A"}
                     </dd>
@@ -1065,3 +1044,13 @@ function RoutesSchedules({ loader }) {
 }
 
 export default isAuth(RoutesSchedules);
+
+const days = [
+  { name: "Monday", value: "Mon" },
+  { name: "Tuesday", value: "Tue" },
+  { name: "Wednesday", value: "Wed" },
+  { name: "Thursday", value: "Thu" },
+  { name: "Friday", value: "Fri" },
+  { name: "Saturday", value: "Sat" },
+  { name: "Sunday", value: "Sun" },
+];

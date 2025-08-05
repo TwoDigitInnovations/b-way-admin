@@ -29,6 +29,12 @@ const Sidebar = () => {
     },
     {
       icon: "/images/s1.png",
+      label: "Items",
+      href: "/items",
+      role: ["ADMIN", "DISPATCHER"],
+    },
+    {
+      icon: "/images/s1.png",
       label: "Orders",
       href: "/ordersv",
       role: ["ADMIN", "DISPATCHER", "USER"],

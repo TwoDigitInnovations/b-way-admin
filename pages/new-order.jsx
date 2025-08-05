@@ -1,32 +1,37 @@
 import React, { useEffect, useState } from "react";
 import { Clock } from "lucide-react";
 import Layout from "@/components/layout";
-import itemsData from "../utils/items.json";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
 import { Api } from "@/helper/service";
 import { useRouter } from "next/router";
 import toast from "react-hot-toast";
+import { fetchItems } from "@/store/itemSlice";
 
 export default function NewOrder({ loader }) {
-  const [items, setItems] = useState(itemsData);
+  const [selectedItemLocation, setSelectedItemLocation] = useState(null);
   const dispatch = useDispatch();
   const router = useRouter();
+  const { items } = useSelector((state) => state.item);
+
+  useEffect(() => {
+    dispatch(fetchItems());
+  }, [dispatch]);
 
   const validationSchema = Yup.object({
     items: Yup.string().required("Item(s) is required"),
     qty: Yup.number()
       .required("Quantity is required")
       .min(1, "Must be at least 1"),
-    pickupLocation: Yup.object({
-      address: Yup.string().required("Pickup address is required"),
-      city: Yup.string().required("Pickup city is required"),
-      state: Yup.string().required("Pickup state is required"),
-      zipcode: Yup.string()
-      .matches(/^\d{5}$/, "Pickup zipcode must be exactly 5 digits")
-      .required("Pickup zipcode is required"),
-    }),
+    // pickupLocation: Yup.object({
+    //   address: Yup.string().required("Pickup address is required"),
+    //   city: Yup.string().required("Pickup city is required"),
+    //   state: Yup.string().required("Pickup state is required"),
+    //   zipcode: Yup.string()
+    //   .matches(/^\d{5}$/, "Pickup zipcode must be exactly 5 digits")
+    //   .required("Pickup zipcode is required"),
+    // }),
     deliveryLocation: Yup.object({
       address: Yup.string().required("Delivery address is required"),
       city: Yup.string().required("Delivery city is required"),
@@ -40,12 +45,6 @@ export default function NewOrder({ loader }) {
   const initialValues = {
     items: "",
     qty: "",
-    pickupLocation: {
-      address: "",
-      city: "",
-      state: "",
-      zipcode: "",
-    },
     deliveryLocation: {
       address: "",
       city: "",
@@ -62,10 +61,10 @@ export default function NewOrder({ loader }) {
     const orderData = {
       items: values.items,
       qty: values.qty,
-      pickupLocation: values.pickupLocation.address,
-      pickupCity: values.pickupLocation.city,
-      pickupState: values.pickupLocation.state,
-      pickupZipcode: values.pickupLocation.zipcode,
+      pickupLocation: selectedItemLocation.address,
+      pickupCity: selectedItemLocation.city,
+      pickupState: selectedItemLocation.state,
+      pickupZipcode: selectedItemLocation.zipcode,
       deliveryLocation: values.deliveryLocation.address,
       deliveryCity: values.deliveryLocation.city,
       deliveryState: values.deliveryLocation.state,
@@ -82,7 +81,8 @@ export default function NewOrder({ loader }) {
         console.log("Order created successfully:", response);
         if (response?.status) {
           toast.success("Order created successfully!");
-          resetForm(); // Properly reset the form using Formik's resetForm
+          resetForm();
+          setSelectedItemLocation(null);
           //   router.push("/ordersv");
         } else {
           toast.error("Failed to create order. Please try again.");
@@ -90,7 +90,7 @@ export default function NewOrder({ loader }) {
       })
       .catch((error) => {
         console.error("Error submitting form:", error);
-        toast.error("An error occurred while creating the order.");
+        toast.error(error.message || "An error occurred while creating the order.");
       })
       .finally(() => {
         loader(false);
@@ -128,12 +128,20 @@ export default function NewOrder({ loader }) {
                     <select
                       name="items"
                       value={values.items}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        handleChange(e);
+                        const selectedItem = items.find(
+                          (item) => item._id === e.target.value
+                        );
+                        setSelectedItemLocation(
+                          selectedItem ? selectedItem.pickupLocation : null
+                        );
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                     >
                       <option value="">Select Item(S)</option>
-                      {items?.items?.map((item) => (
-                        <option key={item.id} value={item.name}>
+                      {items?.map((item) => (
+                        <option key={item._id} value={item._id}>
                           {item.name}
                         </option>
                       ))}
@@ -157,89 +165,6 @@ export default function NewOrder({ loader }) {
                     <span className="text-sm text-red-600">
                       {errors.qty && touched.qty && errors.qty}
                     </span>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <h3 className="text-md font-semibold text-[#003C72] mb-3">
-                    Pickup Location
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Address
-                      </label>
-                      <input
-                        type="text"
-                        name="pickupLocation.address"
-                        value={values.pickupLocation.address}
-                        onChange={handleChange}
-                        placeholder="Address"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                      />
-                      <span className="text-sm text-red-600">
-                        {errors.pickupLocation?.address &&
-                          touched.pickupLocation?.address &&
-                          errors.pickupLocation.address}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        City
-                      </label>
-                      <select
-                        name="pickupLocation.city"
-                        value={values.pickupLocation.city}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                      >
-                        <option value="">Select City</option>
-                        <option value="New York">New York</option>
-                      </select>
-                      <span className="text-sm text-red-600">
-                        {errors.pickupLocation?.city &&
-                          touched.pickupLocation?.city &&
-                          errors.pickupLocation.city}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        State
-                      </label>
-                      <select
-                        name="pickupLocation.state"
-                        value={values.pickupLocation.state}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                      >
-                        <option value="">Select State</option>
-                        <option value="NY">NY</option>
-                      </select>
-                      <span className="text-sm text-red-600">
-                        {errors.pickupLocation?.state &&
-                          touched.pickupLocation?.state &&
-                          errors.pickupLocation.state}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Zipcode
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Zipcode"
-                        name="pickupLocation.zipcode"
-                        value={values.pickupLocation.zipcode}
-                        onChange={handleChange}
-                        maxLength={5}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                      />
-                      <span className="text-sm text-red-600">
-                        {errors.pickupLocation?.zipcode &&
-                          touched.pickupLocation?.zipcode &&
-                          errors.pickupLocation.zipcode}
-                      </span>
-                    </div>
                   </div>
                 </div>
 

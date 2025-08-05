@@ -22,9 +22,17 @@ import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
 import isAuth from "@/components/isAuth";
 import { Api } from "@/helper/service";
+import { AutoComplete } from "primereact/autocomplete";
+import { getStateAndCityPicklist } from "@/utils/states";
 
 // Add/Edit Modal Component
 function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
+  const statesAndCities = getStateAndCityPicklist();
+  const allCities = Object.values(statesAndCities).flat();
+  const allStates = Object.keys(statesAndCities);
+  const [filteredCities, setFilteredCities] = useState(allCities);
+  const [filteredStates, setFilteredStates] = useState(allStates);
+
   const [formData, setFormData] = useState({
     hospitalName: "",
     contactPerson: "",
@@ -84,6 +92,31 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   };
 
   if (!isOpen) return null;
+
+  // Autocomplete search for city
+  const searchCities = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allCities;
+    } else {
+      filtered = allCities.filter((city) =>
+        city.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredCities(filtered);
+  };
+  // Autocomplete search for state
+  const searchStates = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allStates;
+    } else {
+      filtered = allStates.filter((state) =>
+        state.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredStates(filtered);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -171,40 +204,40 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
               <label className="block text-sm font-medium text-gray-700">
                 City
               </label>
-              <select
-                name="city"
+              <AutoComplete
                 value={formData.city}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white text-gray-700"
-                required
-              >
-                <option value="">Select City</option>
-                <option value="New York">New York</option>
-                <option value="Los Angeles">Los Angeles</option>
-                <option value="Chicago">Chicago</option>
-                <option value="Houston">Houston</option>
-                <option value="Phoenix">Phoenix</option>
-              </select>
+                suggestions={filteredCities}
+                completeMethod={searchCities}
+                onChange={(e) => setFormData((prev) => ({ ...prev, city: e.value }))}
+                dropdown
+                placeholder="Select or type city"
+                inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-secondary focus:!border-secondary !text-sm text-gray-700"
+                className="w-full max-w-[220px]"
+                panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                itemTemplate={(item) => (
+                  <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                )}
+              />
             </div>
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 State
               </label>
-              <select
-                name="state"
+              <AutoComplete
                 value={formData.state}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white text-gray-700"
-                required
-              >
-                <option value="">Select State</option>
-                <option value="NY">New York</option>
-                <option value="CA">California</option>
-                <option value="IL">Illinois</option>
-                <option value="TX">Texas</option>
-                <option value="AZ">Arizona</option>
-              </select>
+                suggestions={filteredStates}
+                completeMethod={searchStates}
+                onChange={(e) => setFormData((prev) => ({ ...prev, state: e.value }))}
+                dropdown
+                placeholder="Select or type state"
+                inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-secondary focus:!border-secondary !text-sm text-gray-700"
+                className="w-full max-w-[220px]"
+                panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                itemTemplate={(item) => (
+                  <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                )}
+              />
             </div>
 
             <div className="space-y-2">

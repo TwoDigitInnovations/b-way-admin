@@ -437,7 +437,13 @@ function Orders({ loader, user }) {
             field="items"
             header="Item(s)"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-            body={(rowData) => <span>{rowData.items || "N/A"}</span>}
+            body={(rowData) => (
+              <span>
+                {Array.isArray(rowData.items)
+                  ? rowData.items.map(item => item?.name).join(', ')
+                  : rowData.items?.name || "N/A"}
+              </span>
+            )}
           />
           <Column
             field="qty"
@@ -912,7 +918,9 @@ function Orders({ loader, user }) {
                       Item(s)
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {selectedOrder.items || "N/A"}
+                      {Array.isArray(selectedOrder.items)
+                        ? selectedOrder.items.map(item => item?.name).join(', ')
+                        : selectedOrder.items?.name || "N/A"}
                     </dd>
                   </div>
                   <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">

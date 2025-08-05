@@ -24,6 +24,8 @@ export default function NewOrder({ loader }) {
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedState, setSelectedState] = useState("");
   const [detectedState, setDetectedState] = useState("");
+  const [filteredItems, setFilteredItems] = useState([]);
+  const [itemInput, setItemInput] = useState("");
 
   useEffect(() => {
     dispatch(fetchItems());
@@ -91,6 +93,7 @@ export default function NewOrder({ loader }) {
           toast.success("Order created successfully!");
           resetForm();
           setSelectedItemLocation(null);
+          setItemInput(""); // Reset input
           //   router.push("/ordersv");
         } else {
           toast.error("Failed to create order. Please try again.");
@@ -131,6 +134,19 @@ export default function NewOrder({ loader }) {
     setFilteredStates(filtered);
   };
 
+  // Autocomplete search for items
+  const searchItems = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = items;
+    } else {
+      filtered = items.filter((item) =>
+        item.name.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredItems(filtered);
+  };
+
   return (
     <Layout title={"Create New Order"}>
       <Formik
@@ -159,27 +175,36 @@ export default function NewOrder({ loader }) {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Item(S)
                     </label>
-                    <select
-                      name="items"
-                      value={values.items}
+                    <AutoComplete
+                      value={itemInput}
+                      suggestions={filteredItems}
+                      completeMethod={searchItems}
+                      field="name"
                       onChange={(e) => {
-                        handleChange(e);
-                        const selectedItem = items.find(
-                          (item) => item._id === e.target.value
-                        );
-                        setSelectedItemLocation(
-                          selectedItem ? selectedItem.pickupLocation : null
-                        );
+                        setItemInput(e.value);
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                    >
-                      <option value="">Select Item(S)</option>
-                      {items?.map((item) => (
-                        <option key={item._id} value={item._id}>
+                      onSelect={(e) => {
+                        const selectedItem = e.value;
+                        setItemInput(selectedItem.name);
+                        handleChange({
+                          target: {
+                            name: "items",
+                            value: selectedItem?._id || "",
+                          },
+                        });
+                        setSelectedItemLocation(selectedItem ? selectedItem.pickupLocation : null);
+                      }}
+                      dropdown
+                      placeholder="Select or type item"
+                      inputClassName="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                      className="w-full"
+                      panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                      itemTemplate={(item) => (
+                        <div className="px-3 py-2 hover:bg-gray-100 text-sm">
                           {item.name}
-                        </option>
-                      ))}
-                    </select>
+                        </div>
+                      )}
+                    />
                     <span className="text-sm text-red-600">
                       {errors.items && touched.items && errors.items}
                     </span>

@@ -11,6 +11,8 @@ import { TrendingUp } from "lucide-react";
 import { userContext } from "@/pages/_app";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
+import { useState } from "react";
+import { useRouter } from "next/router";
 
 export default function Operational({
   statsCards,
@@ -21,6 +23,9 @@ export default function Operational({
   loading = false,
 }) {
   const [user, setUser] = useContext(userContext);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const router = useRouter();
 
     const getStatusStyle = (status) => {
     const statusStyles = {
@@ -267,7 +272,9 @@ export default function Operational({
                 <h3 className="text-base lg:text-lg font-semibold text-gray-900">
                   Recent Orders
                 </h3>
-                <button className="text-[#003C72] hover:text-[#003C72] font-medium text-sm lg:text-base">
+                <button className="text-[#003C72] hover:text-[#003C72] font-medium text-sm lg:text-base"
+                  onClick={() => router.push('/ordersv')}
+                >
                   View All
                 </button>
               </div>
@@ -359,11 +366,9 @@ export default function Operational({
                       <div className="relative flex justify-center">
                         <button
                           type="button"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            setSelectedRowData(rowData);
-                            // menuRef.current.toggle(event);
+                          onClick={() => {
+                            setSelectedOrder(rowData);
+                            setShowOrderModal(true);
                           }}
                           className="text-secondary hover:text-secondary font-medium text-sm w-full bg-secondary/20 hover:bg-secondary/40 cursor-pointer py-1 px-2 rounded"
                         >
@@ -383,6 +388,62 @@ export default function Operational({
           </div>
         </div>
       </div>
+
+      {/* Order Details Modal */}
+      {showOrderModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Order Details</h2>
+              <button
+                onClick={() => {
+                  setShowOrderModal(false);
+                  setSelectedOrder(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <span className="text-gray-500">×</span>
+              </button>
+            </div>
+            <div className="p-4">
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Order ID</dt>
+                  <dd className="text-sm text-gray-900">{selectedOrder.orderId || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Facility</dt>
+                  <dd className="text-sm text-gray-900">{selectedOrder.facilityName || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Item(s)</dt>
+                  <dd className="text-sm text-gray-900">{selectedOrder.items || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Quantity</dt>
+                  <dd className="text-sm text-gray-900">{selectedOrder.qty || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Status</dt>
+                  <dd className="text-sm text-gray-900">{selectedOrder.status || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Driver</dt>
+                  <dd className="text-sm text-gray-900">{selectedOrder.assignedDriver || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Route</dt>
+                  <dd className="text-sm text-gray-900">{selectedOrder.route || 'N/A'}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">ETA</dt>
+                  <dd className="text-sm text-gray-900">{selectedOrder.eta || 'N/A'}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

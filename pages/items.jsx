@@ -29,6 +29,8 @@ import * as Yup from "yup";
 import Currency from "@/helper/currency";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserList } from "@/store/userList";
+import { AutoComplete } from "primereact/autocomplete";
+import { getStateAndCityPicklist } from "@/utils/states";
 
 function Items({ loader, user }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -47,6 +49,11 @@ function Items({ loader, user }) {
   const router = useRouter();
   const dispatch = useDispatch();
   const { userList } = useSelector((state) => state.user);
+  const statesAndCities = getStateAndCityPicklist();
+  const allCities = Object.values(statesAndCities).flat();
+  const allStates = Object.keys(statesAndCities);
+  const [filteredCities, setFilteredCities] = useState(allCities);
+  const [filteredStates, setFilteredStates] = useState(allStates);
 
   useEffect(() => {
     if (user.role === "ADMIN") {
@@ -314,6 +321,31 @@ function Items({ loader, user }) {
     );
   };
 
+  // Autocomplete search for city
+  const searchCities = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allCities;
+    } else {
+      filtered = allCities.filter((city) =>
+        city.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredCities(filtered);
+  };
+  // Autocomplete search for state
+  const searchStates = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allStates;
+    } else {
+      filtered = allStates.filter((state) =>
+        state.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredStates(filtered);
+  };
+
   return (
     <Layout title="Items">
       <div className="bg-white shadow-sm overflow-hidden rounded-lg">
@@ -496,6 +528,7 @@ function Items({ loader, user }) {
                 handleSubmit,
                 errors,
                 touched,
+                setFieldValue,
               }) => (
                 <form onSubmit={handleSubmit}>
                   {/* Modal Content */}
@@ -655,9 +688,7 @@ function Items({ loader, user }) {
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Address
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
                           <input
                             type="text"
                             name="pickupLocation.address"
@@ -667,51 +698,51 @@ function Items({ loader, user }) {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                           />
                           <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.address &&
-                              touched.pickupLocation?.address &&
-                              errors.pickupLocation.address}
+                            {errors.pickupLocation?.address && touched.pickupLocation?.address && errors.pickupLocation.address}
                           </span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            City
-                          </label>
-                          <input
-                            type="text"
-                            name="pickupLocation.city"
+                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                          <AutoComplete
                             value={values.pickupLocation.city}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                            placeholder="City"
+                            suggestions={filteredCities}
+                            completeMethod={searchCities}
+                            onChange={(e) => setFieldValue("pickupLocation.city", e.value)}
+                            dropdown
+                            placeholder="Select or type city"
+                            inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                            className="w-full max-w-[220px]"
+                            panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                            itemTemplate={(item) => (
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            )}
                           />
                           <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.city &&
-                              touched.pickupLocation?.city &&
-                              errors.pickupLocation.city}
+                            {errors.pickupLocation?.city && touched.pickupLocation?.city && errors.pickupLocation.city}
                           </span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            State
-                          </label>
-                          <input
-                            type="text"
-                            name="pickupLocation.state"
+                          <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                          <AutoComplete
                             value={values.pickupLocation.state}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                            placeholder="State"
+                            suggestions={filteredStates}
+                            completeMethod={searchStates}
+                            onChange={(e) => setFieldValue("pickupLocation.state", e.value)}
+                            dropdown
+                            placeholder="Select or type state"
+                            inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                            className="w-full max-w-[220px]"
+                            panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                            itemTemplate={(item) => (
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            )}
                           />
                           <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.state &&
-                              touched.pickupLocation?.state &&
-                              errors.pickupLocation.state}
+                            {errors.pickupLocation?.state && touched.pickupLocation?.state && errors.pickupLocation.state}
                           </span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Zipcode
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
                           <input
                             type="text"
                             name="pickupLocation.zipCode"
@@ -722,9 +753,7 @@ function Items({ loader, user }) {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                           />
                           <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.zipCode &&
-                              touched.pickupLocation?.zipCode &&
-                              errors.pickupLocation.zipCode}
+                            {errors.pickupLocation?.zipCode && touched.pickupLocation?.zipCode && errors.pickupLocation.zipCode}
                           </span>
                         </div>
                       </div>

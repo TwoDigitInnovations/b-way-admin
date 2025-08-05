@@ -34,6 +34,8 @@ import {
 } from "@/store/routeSlice";
 import { fetchDrivers } from "@/store/driverSlice";
 import { MultiSelect } from "primereact/multiselect";
+import { AutoComplete } from "primereact/autocomplete";
+import { getStateAndCityPicklist } from "@/utils/states";
 
 // Validation schema using Yup
 const validationSchema = Yup.object({
@@ -100,6 +102,11 @@ function RoutesSchedules({ loader }) {
   const totalPages = useSelector(selectTotal);
   const loading = useSelector(selectLoading);
   const { drivers, assignedDriver } = useSelector((state) => state.driver);
+
+  const [filteredStartCities, setFilteredStartCities] = useState(allCities);
+  const [filteredStartStates, setFilteredStartStates] = useState(allStates);
+  const [filteredEndCities, setFilteredEndCities] = useState(allCities);
+  const [filteredEndStates, setFilteredEndStates] = useState(allStates);
 
   useEffect(() => {
     dispatch(fetchRoutes({ page: currentPage, limit }));
@@ -297,6 +304,55 @@ function RoutesSchedules({ loader }) {
     loader(loading);
   }, [loading, loader]);
 
+  // Autocomplete search for start city
+  const searchStartCities = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allCities;
+    } else {
+      filtered = allCities.filter((city) =>
+        city.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredStartCities(filtered);
+  };
+  // Autocomplete search for start state
+  const searchStartStates = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allStates;
+    } else {
+      filtered = allStates.filter((state) =>
+        state.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredStartStates(filtered);
+  };
+  // Autocomplete search for end city
+  const searchEndCities = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allCities;
+    } else {
+      filtered = allCities.filter((city) =>
+        city.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredEndCities(filtered);
+  };
+  // Autocomplete search for end state
+  const searchEndStates = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allStates;
+    } else {
+      filtered = allStates.filter((state) =>
+        state.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredEndStates(filtered);
+  };
+
   return (
     <Layout title="All Routes & Schedules">
       {/* Main Content */}
@@ -435,7 +491,7 @@ function RoutesSchedules({ loader }) {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-[#003C72]">
@@ -547,15 +603,12 @@ function RoutesSchedules({ loader }) {
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
                         <Field
                           type="text"
                           name="startAddress"
                           placeholder="Address *"
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.startAddress && errors.startAddress
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
+                          className="w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 mt-[22px]"
                         />
                         <ErrorMessage
                           name="startAddress"
@@ -563,59 +616,50 @@ function RoutesSchedules({ loader }) {
                           className="text-red-500 text-xs mt-1"
                         />
                       </div>
-                      <div>
-                        <Field
-                          as="select"
-                          name="startCity"
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.startCity && errors.startCity
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          <option value="">Select City *</option>
-                          <option value="New York">New York</option>
-                          <option value="Los Angeles">Los Angeles</option>
-                          <option value="Chicago">Chicago</option>
-                        </Field>
-                        <ErrorMessage
-                          name="startCity"
-                          component="div"
-                          className="text-red-500 text-xs mt-1"
+                      <div className="flex flex-col">
+                        <label className="block text-sm font-medium text-gray-700 mb-7">City *</label>
+                        <AutoComplete
+                          value={values.startCity}
+                          suggestions={filteredStartCities}
+                          completeMethod={searchStartCities}
+                          onChange={(e) => setFieldValue("startCity", e.value)}
+                          dropdown
+                          placeholder="Select or type city"
+                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                          className="w-full max-w-[220px]"
+                          panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                          itemTemplate={(item) => (
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                          )}
                         />
+                        <ErrorMessage name="startCity" component="div" className="text-red-500 text-xs mt-1" />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="block text-sm font-medium text-gray-700 mb-7">State *</label>
+                        <AutoComplete
+                          value={values.startState}
+                          suggestions={filteredStartStates}
+                          completeMethod={searchStartStates}
+                          onChange={(e) => setFieldValue("startState", e.value)}
+                          dropdown
+                          placeholder="Select or type state"
+                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                          className="w-full max-w-[220px]"
+                          panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                          itemTemplate={(item) => (
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                          )}
+                        />
+                        <ErrorMessage name="startState" component="div" className="text-red-500 text-xs mt-1" />
                       </div>
                       <div>
-                        <Field
-                          as="select"
-                          name="startState"
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.startState && errors.startState
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          <option value="">Select State *</option>
-                          <option value="NY">New York</option>
-                          <option value="CA">California</option>
-                          <option value="IL">Illinois</option>
-                        </Field>
-                        <ErrorMessage
-                          name="startState"
-                          component="div"
-                          className="text-red-500 text-xs mt-1"
-                        />
-                      </div>
-                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode *</label>
                         <Field
                           type="text"
                           name="startZipcode"
                           placeholder="Zipcode *"
                           maxLength={5}
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.startZipcode && errors.startZipcode
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
+                          className="w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 mt-[22px]"
                         />
                         <ErrorMessage
                           name="startZipcode"
@@ -633,15 +677,12 @@ function RoutesSchedules({ loader }) {
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
                         <Field
                           type="text"
                           name="endAddress"
                           placeholder="Address *"
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.endAddress && errors.endAddress
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
+                          className="w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 "
                         />
                         <ErrorMessage
                           name="endAddress"
@@ -649,59 +690,50 @@ function RoutesSchedules({ loader }) {
                           className="text-red-500 text-xs mt-1"
                         />
                       </div>
-                      <div>
-                        <Field
-                          as="select"
-                          name="endCity"
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.endCity && errors.endCity
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          <option value="">Select City *</option>
-                          <option value="New York">New York</option>
-                          <option value="Los Angeles">Los Angeles</option>
-                          <option value="Chicago">Chicago</option>
-                        </Field>
-                        <ErrorMessage
-                          name="endCity"
-                          component="div"
-                          className="text-red-500 text-xs mt-1"
+                      <div className="flex flex-col">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                        <AutoComplete
+                          value={values.endCity}
+                          suggestions={filteredEndCities}
+                          completeMethod={searchEndCities}
+                          onChange={(e) => setFieldValue("endCity", e.value)}
+                          dropdown
+                          placeholder="Select or type city"
+                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                          className="w-full max-w-[220px]"
+                          panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                          itemTemplate={(item) => (
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                          )}
                         />
+                        <ErrorMessage name="endCity" component="div" className="text-red-500 text-xs mt-1" />
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">State *</label>
+                        <AutoComplete
+                          value={values.endState}
+                          suggestions={filteredEndStates}
+                          completeMethod={searchEndStates}
+                          onChange={(e) => setFieldValue("endState", e.value)}
+                          dropdown
+                          placeholder="Select or type state"
+                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                          className="w-full max-w-[220px]"
+                          panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                          itemTemplate={(item) => (
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                          )}
+                        />
+                        <ErrorMessage name="endState" component="div" className="text-red-500 text-xs mt-1" />
                       </div>
                       <div>
-                        <Field
-                          as="select"
-                          name="endState"
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.endState && errors.endState
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          <option value="">Select State *</option>
-                          <option value="NY">New York</option>
-                          <option value="CA">California</option>
-                          <option value="IL">Illinois</option>
-                        </Field>
-                        <ErrorMessage
-                          name="endState"
-                          component="div"
-                          className="text-red-500 text-xs mt-1"
-                        />
-                      </div>
-                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode *</label>
                         <Field
                           type="text"
                           name="endZipcode"
                           placeholder="Zipcode *"
                           maxLength={5}
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.endZipcode && errors.endZipcode
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
+                          className="w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 "
                         />
                         <ErrorMessage
                           name="endZipcode"
@@ -1054,3 +1086,7 @@ const days = [
   { name: "Saturday", value: "Sat" },
   { name: "Sunday", value: "Sun" },
 ];
+
+const statesAndCities = getStateAndCityPicklist();
+const allCities = Object.values(statesAndCities).flat();
+const allStates = Object.keys(statesAndCities);

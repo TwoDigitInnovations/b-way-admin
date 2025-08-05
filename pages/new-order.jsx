@@ -8,15 +8,28 @@ import { Api } from "@/helper/service";
 import { useRouter } from "next/router";
 import toast from "react-hot-toast";
 import { fetchItems } from "@/store/itemSlice";
+import { getStateAndCityPicklist, getStateByCity } from "@/utils/states";
+import { AutoComplete } from "primereact/autocomplete";
 
 export default function NewOrder({ loader }) {
   const [selectedItemLocation, setSelectedItemLocation] = useState(null);
   const dispatch = useDispatch();
   const router = useRouter();
   const { items } = useSelector((state) => state.item);
+  const statesAndCities = getStateAndCityPicklist();
+  const allCities = Object.values(statesAndCities).flat();
+  const allStates = Object.keys(statesAndCities);
+  const [filteredCities, setFilteredCities] = useState([]);
+  const [filteredStates, setFilteredStates] = useState([]);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedState, setSelectedState] = useState("");
+  const [detectedState, setDetectedState] = useState("");
 
   useEffect(() => {
     dispatch(fetchItems());
+    // Initialize filtered cities and states with all options
+    setFilteredCities(allCities);
+    setFilteredStates(allStates);
   }, [dispatch]);
 
   const validationSchema = Yup.object({
@@ -37,8 +50,8 @@ export default function NewOrder({ loader }) {
       city: Yup.string().required("Delivery city is required"),
       state: Yup.string().required("Delivery state is required"),
       zipcode: Yup.string()
-      .matches(/^\d{5}$/, "Delivery zipcode must be exactly 5 digits")
-      .required("Delivery zipcode is required"),
+        .matches(/^\d{5}$/, "Delivery zipcode must be exactly 5 digits")
+        .required("Delivery zipcode is required"),
     }),
   });
 
@@ -56,7 +69,7 @@ export default function NewOrder({ loader }) {
   const handleSubmit = (values, { resetForm }) => {
     console.log("Form submitted with values:", values);
     loader(true);
-    
+
     // Transform the data to match backend expectations
     const orderData = {
       items: values.items,
@@ -71,12 +84,7 @@ export default function NewOrder({ loader }) {
       deliveryZipcode: values.deliveryLocation.zipcode,
     };
 
-    Api(
-      "POST",
-      "/order/create",
-      orderData,
-      router
-    )
+    Api("POST", "/order/create", orderData, router)
       .then((response) => {
         console.log("Order created successfully:", response);
         if (response?.status) {
@@ -90,11 +98,37 @@ export default function NewOrder({ loader }) {
       })
       .catch((error) => {
         console.error("Error submitting form:", error);
-        toast.error(error.message || "An error occurred while creating the order.");
+        toast.error(
+          error.message || "An error occurred while creating the order."
+        );
       })
       .finally(() => {
         loader(false);
       });
+  };
+
+  const searchCities = (event) => {
+    let filtered = [];
+    if (event.query.length === 0) {
+      filtered = allCities; // Show all cities when no query
+    } else {
+      filtered = allCities.filter((city) =>
+        city.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredCities(filtered);
+  };
+
+  const searchStates = (event) => {
+    let filtered = [];
+    if (event.query.length === 0) {
+      filtered = allStates; // Show all states when no query
+    } else {
+      filtered = allStates.filter((state) =>
+        state.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredStates(filtered);
   };
 
   return (
@@ -196,15 +230,46 @@ export default function NewOrder({ loader }) {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         City
                       </label>
-                      <select
-                        name="deliveryLocation.city"
+                      <AutoComplete
                         value={values.deliveryLocation.city}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                      >
-                        <option value="">Select City</option>
-                        <option value="New York">New York</option>
-                      </select>
+                        suggestions={filteredCities}
+                        completeMethod={searchCities}
+                        onDropdownClick={() => {
+                          setFilteredCities(allCities);
+                        }}
+                        onChange={(e) => {
+                          const cityValue = e.value || e.target.value;
+                          handleChange({
+                            target: {
+                              name: "deliveryLocation.city",
+                              value: cityValue,
+                            },
+                          });
+                          setSelectedCity(cityValue);
+                          if (cityValue) {
+                            const state = getStateByCity(cityValue);
+                            setDetectedState(state);
+                            if (state) {
+                              handleChange({
+                                target: {
+                                  name: "deliveryLocation.state",
+                                  value: state,
+                                },
+                              });
+                            }
+                          }
+                        }}
+                        dropdown
+                        placeholder="Select or type city"
+                        inputClassName="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                        className="w-full"
+                        panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                        itemTemplate={(item) => (
+                          <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                            {item}
+                          </div>
+                        )}
+                      />
                       <span className="text-sm text-red-600">
                         {errors.deliveryLocation?.city &&
                           touched.deliveryLocation?.city &&
@@ -215,16 +280,34 @@ export default function NewOrder({ loader }) {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         State
                       </label>
-                      <select
-                        name="deliveryLocation.state"
+                      <AutoComplete
                         value={values.deliveryLocation.state}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                      >
-                        <option value="">Select State</option>
-                        <option value="NY">NY</option>
-                      </select>
-
+                        suggestions={filteredStates}
+                        completeMethod={searchStates}
+                        onDropdownClick={() => {
+                          setFilteredStates(allStates);
+                        }}
+                        onChange={(e) => {
+                          const stateValue = e.value || e.target.value;
+                          handleChange({
+                            target: {
+                              name: "deliveryLocation.state",
+                              value: stateValue,
+                            },
+                          });
+                          setSelectedState(stateValue);
+                        }}
+                        dropdown
+                        placeholder="Select or type state"
+                        inputClassName="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                        className="w-full"
+                        panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                        itemTemplate={(item) => (
+                          <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                            {item}
+                          </div>
+                        )}
+                      />
                       <span className="text-sm text-red-600">
                         {errors.deliveryLocation?.state &&
                           touched.deliveryLocation?.state &&

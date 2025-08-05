@@ -396,7 +396,7 @@ function Orders({ loader, user }) {
         <DataTable
           value={orders}
           stripedRows
-          tableStyle={{ minWidth: "30rem" }}
+          tableStyle={{ minWidth: "50rem" }}
           rowClassName={() => "hover:bg-gray-50"}
           size="small"
           paginator
@@ -409,8 +409,7 @@ function Orders({ loader, user }) {
           <Column
             field="index"
             header="No."
-            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
-            style={{ width: "40px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
             field="orderId"
@@ -419,46 +418,36 @@ function Orders({ loader, user }) {
               color: "#F97316",
               fontWeight: 500,
               verticalAlign: "middle",
-              fontSize: "12px",
+              fontSize: "14px",
             }}
-            style={{ width: "90px" }}
           />
           {user?.role === "ADMIN" && (
             <Column
               field="facilityName"
               header="Facility"
-              bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
+              bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
               body={(rowData) => (
                 <span style={{ color: "#374151", fontWeight: 500 }}>
                   {rowData.user?.name || "N/A"}
                 </span>
               )}
-              style={{ width: "80px" }}
             />
           )}
           <Column
             field="items"
             header="Item(s)"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
-            body={(rowData) => (
-              <span>
-                {Array.isArray(rowData.items)
-                  ? rowData.items.map(item => item?.name).join(', ')
-                  : rowData.items?.name || "N/A"}
-              </span>
-            )}
-            style={{ width: "80px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => <span>{rowData.items || "N/A"}</span>}
           />
           <Column
             field="qty"
             header="Qty"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
-            style={{ width: "50px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
           <Column
             field="pickupLocation"
             header="Pickup"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
               <span>
                 {rowData?.pickupLocation
@@ -466,25 +455,22 @@ function Orders({ loader, user }) {
                   : "N/A"}
               </span>
             )}
-            style={{ width: "120px" }}
           />
           <Column
             field="deliveryLocation"
             header="Delivery"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
               <span>{rowData?.deliveryLocation?.address}</span>
             )}
-            style={{ width: "120px" }}
           />
           <Column
             field="route"
             header="Route"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
               <span>{rowData?.route ? rowData?.route?.routeName : "N/A"}</span>
             )}
-            style={{ width: "100px" }}
           />
           <Column
             field="status"
@@ -495,9 +481,8 @@ function Orders({ loader, user }) {
           <Column
             field="eta"
             header="ETA"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => <span>{rowData.eta ? rowData.eta : "N/A"}</span>}
-            style={{ width: "60px" }}
           />
           <Column
             header="Action"
@@ -507,7 +492,6 @@ function Orders({ loader, user }) {
               overflow: "visible",
               position: "relative",
             }}
-            style={{ width: "60px" }}
             body={(rowData, options) => (
               <div className="relative flex justify-center">
                 <button

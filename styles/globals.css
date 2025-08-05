@@ -272,6 +272,15 @@ table .p-datatable-thead tr th {
   color: #111827;
 }
 
+.p-autocomplete-panel .p-autocomplete-items .p-autocomplete-item{
+  /* padding: 0.5rem 0.75rem; */
+  font-size: 0.875rem;
+}
+
+.p-autocomplete-panel .p-autocomplete-items .p-autocomplete-item div{
+  padding: 0.05rem 0.2rem;
+}
+
 .p-multiselect:focus,
 .p-multiselect:not(.p-disabled):hover,
 .p-multiselect:hover {
@@ -280,4 +289,30 @@ table .p-datatable-thead tr th {
 
 .p-multiselect.error {
   border-color: #ef4444;
+}
+
+.p-autocomplete{
+  height: 40px !important;
+}
+
+.p-inputwrapper-focus{
+  border: none;
+  box-shadow: none;
+}
+
+.p-inputtext:enabled:focus {
+  border: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0);
+}
+
+.p-button {
+  background-color: #003c72;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  height: 40px !important;
+}
+
+.p-button:enabled:focus {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }

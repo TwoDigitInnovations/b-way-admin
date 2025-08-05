@@ -30,6 +30,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchDrivers } from "@/store/driverSlice";
 import { fetchRoutes } from "@/store/routeSlice";
 import items from "../utils/items.json";
+import { AutoComplete } from "primereact/autocomplete";
+import { getStateAndCityPicklist } from "@/utils/states";
 
 function Orders({ loader, user }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -52,6 +54,15 @@ function Orders({ loader, user }) {
   const { routes, assignedRoute, loading, error } = useSelector(
     (state) => state.route
   );
+
+  const statesAndCities = getStateAndCityPicklist();
+  const allCities = Object.values(statesAndCities).flat();
+  const allStates = Object.keys(statesAndCities);
+  const [filteredPickupCities, setFilteredPickupCities] = useState(allCities);
+  const [filteredPickupStates, setFilteredPickupStates] = useState(allStates);
+  const [filteredDeliveryCities, setFilteredDeliveryCities] = useState(allCities);
+  const [filteredDeliveryStates, setFilteredDeliveryStates] = useState(allStates);
+  const [filteredItems, setFilteredItems] = useState(items.items || []);
 
   useEffect(() => {
     dispatch(fetchRoutes({ page: 0, limit: 0 }));
@@ -382,6 +393,67 @@ function Orders({ loader, user }) {
     );
   };
 
+  // Autocomplete search for pickup city
+  const searchPickupCities = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allCities;
+    } else {
+      filtered = allCities.filter((city) =>
+        city.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredPickupCities(filtered);
+  };
+  // Autocomplete search for pickup state
+  const searchPickupStates = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allStates;
+    } else {
+      filtered = allStates.filter((state) =>
+        state.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredPickupStates(filtered);
+  };
+  // Autocomplete search for delivery city
+  const searchDeliveryCities = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allCities;
+    } else {
+      filtered = allCities.filter((city) =>
+        city.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredDeliveryCities(filtered);
+  };
+  // Autocomplete search for delivery state
+  const searchDeliveryStates = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = allStates;
+    } else {
+      filtered = allStates.filter((state) =>
+        state.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredDeliveryStates(filtered);
+  };
+  // Autocomplete search for items
+  const searchItems = (event) => {
+    let filtered = [];
+    if (!event.query || event.query.length === 0) {
+      filtered = items.items || [];
+    } else {
+      filtered = (items.items || []).filter((item) =>
+        item.name.toLowerCase().includes(event.query.toLowerCase())
+      );
+    }
+    setFilteredItems(filtered);
+  };
+
   return (
     <Layout title="Orders">
       <div className="bg-white shadow-sm overflow-hidden rounded-lg">
@@ -596,37 +668,34 @@ function Orders({ loader, user }) {
                 handleSubmit,
                 errors,
                 touched,
+                setFieldValue,
               }) => (
                 <form onSubmit={handleSubmit}>
                   {/* Modal Content */}
                   <div className="p-4 sm:p-6">
                     {/* Item(S) and Qty Row */}
-                    {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Item(S)
-                        </label>
-                        <select
-                          name="items"
-                          value={values.items}
-                          onChange={handleChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                        >
-                          <option value="">Select Item(S)</option>
-                          {items?.items?.map((item) => (
-                            <option key={item.id} value={item.name}>
-                              {item.name}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="text-sm text-red-600">
-                          {errors.items && touched.items && errors.items}
-                        </span>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Item(S)</label>
+                        <AutoComplete
+                          value={filteredItems.find((item) => item._id === values.items) || null}
+                          suggestions={filteredItems}
+                          completeMethod={searchItems}
+                          field="name"
+                          onChange={(e) => setFieldValue("items", e.value?._id || "")}
+                          dropdown
+                          placeholder="Select or type item"
+                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                          className="w-full max-w-[220px]"
+                          panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                          itemTemplate={(item) => (
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item.name}</div>
+                          )}
+                        />
+                        <span className="text-sm text-red-600">{errors.items && touched.items && errors.items}</span>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Qty
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Qty</label>
                         <input
                           type="number"
                           name="qty"
@@ -635,106 +704,82 @@ function Orders({ loader, user }) {
                           placeholder="Qty"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                         />
-                        <span className="text-sm text-red-600">
-                          {errors.qty && touched.qty && errors.qty}
-                        </span>
+                        <span className="text-sm text-red-600">{errors.qty && touched.qty && errors.qty}</span>
                       </div>
-                    </div> */}
-
+                    </div>
                     {/* Pickup Location Section */}
-                    {user?.role === "ADMIN" && (
-                      <div className="mb-6">
-                        <h3 className="text-md font-semibold text-[#003C72] mb-3">
-                          Pickup Location
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Address
-                            </label>
-                            <input
-                              type="text"
-                              name="pickupLocation.address"
-                              value={values.pickupLocation.address}
-                              onChange={handleChange}
-                              placeholder="Address"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                            />
-                            <span className="text-sm text-red-600">
-                              {errors.pickupLocation?.address &&
-                                touched.pickupLocation?.address &&
-                                errors.pickupLocation.address}
-                            </span>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              City
-                            </label>
-                            <input
-                              type="text"
-                              name="pickupLocation.city"
-                              value={values.pickupLocation.city}
-                              onChange={handleChange}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                              placeholder="City"
-                            />
-                            <span className="text-sm text-red-600">
-                              {errors.pickupLocation?.city &&
-                                touched.pickupLocation?.city &&
-                                errors.pickupLocation.city}
-                            </span>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              State
-                            </label>
-                            <input
-                              type="text"
-                              name="pickupLocation.state"
-                              value={values.pickupLocation.state}
-                              onChange={handleChange}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                              placeholder="State"
-                            />
-                            <span className="text-sm text-red-600">
-                              {errors.pickupLocation?.state &&
-                                touched.pickupLocation?.state &&
-                                errors.pickupLocation.state}
-                            </span>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Zipcode
-                            </label>
-                            <input
-                              type="text"
-                              name="pickupLocation.zipcode"
-                              value={values.pickupLocation.zipcode}
-                              onChange={handleChange}
-                              placeholder="Zipcode"
-                              maxLength={5}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                            />
-                            <span className="text-sm text-red-600">
-                              {errors.pickupLocation?.zipcode &&
-                                touched.pickupLocation?.zipcode &&
-                                errors.pickupLocation.zipcode}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Delivery Location Section */}
                     <div className="mb-6">
-                      <h3 className="text-md font-semibold text-[#003C72] mb-3">
-                        Delivery Location
-                      </h3>
+                      <h3 className="text-md font-semibold text-[#003C72] mb-3">Pickup Location</h3>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Address
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                          <input
+                            type="text"
+                            name="pickupLocation.address"
+                            value={values.pickupLocation.address}
+                            onChange={handleChange}
+                            placeholder="Address"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
+                          <span className="text-sm text-red-600">{errors.pickupLocation?.address && touched.pickupLocation?.address && errors.pickupLocation.address}</span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                          <AutoComplete
+                            value={values.pickupLocation.city}
+                            suggestions={filteredPickupCities}
+                            completeMethod={searchPickupCities}
+                            onChange={(e) => setFieldValue("pickupLocation.city", e.value)}
+                            dropdown
+                            placeholder="Select or type city"
+                            inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                            className="w-full max-w-[220px]"
+                            panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                            itemTemplate={(item) => (
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            )}
+                          />
+                          <span className="text-sm text-red-600">{errors.pickupLocation?.city && touched.pickupLocation?.city && errors.pickupLocation.city}</span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                          <AutoComplete
+                            value={values.pickupLocation.state}
+                            suggestions={filteredPickupStates}
+                            completeMethod={searchPickupStates}
+                            onChange={(e) => setFieldValue("pickupLocation.state", e.value)}
+                            dropdown
+                            placeholder="Select or type state"
+                            inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                            className="w-full max-w-[220px]"
+                            panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                            itemTemplate={(item) => (
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            )}
+                          />
+                          <span className="text-sm text-red-600">{errors.pickupLocation?.state && touched.pickupLocation?.state && errors.pickupLocation.state}</span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
+                          <input
+                            type="text"
+                            name="pickupLocation.zipcode"
+                            value={values.pickupLocation.zipcode}
+                            onChange={handleChange}
+                            placeholder="Zipcode"
+                            maxLength={5}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
+                          <span className="text-sm text-red-600">{errors.pickupLocation?.zipcode && touched.pickupLocation?.zipcode && errors.pickupLocation.zipcode}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Delivery Location Section */}
+                    <div className="mb-6">
+                      <h3 className="text-md font-semibold text-[#003C72] mb-3">Delivery Location</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
                           <input
                             type="text"
                             name="deliveryLocation.address"
@@ -743,54 +788,46 @@ function Orders({ loader, user }) {
                             placeholder="Address"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                           />
-                          <span className="text-sm text-red-600">
-                            {errors.deliveryLocation?.address &&
-                              touched.deliveryLocation?.address &&
-                              errors.deliveryLocation.address}
-                          </span>
+                          <span className="text-sm text-red-600">{errors.deliveryLocation?.address && touched.deliveryLocation?.address && errors.deliveryLocation.address}</span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            City
-                          </label>
-                          <select
-                            name="deliveryLocation.city"
+                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                          <AutoComplete
                             value={values.deliveryLocation.city}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                          >
-                            <option value="">Select City</option>
-                            <option value="New York">New York</option>
-                          </select>
-                          <span className="text-sm text-red-600">
-                            {errors.deliveryLocation?.city &&
-                              touched.deliveryLocation?.city &&
-                              errors.deliveryLocation.city}
-                          </span>
+                            suggestions={filteredDeliveryCities}
+                            completeMethod={searchDeliveryCities}
+                            onChange={(e) => setFieldValue("deliveryLocation.city", e.value)}
+                            dropdown
+                            placeholder="Select or type city"
+                            inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                            className="w-full max-w-[220px]"
+                            panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                            itemTemplate={(item) => (
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            )}
+                          />
+                          <span className="text-sm text-red-600">{errors.deliveryLocation?.city && touched.deliveryLocation?.city && errors.deliveryLocation.city}</span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            State
-                          </label>
-                          <select
-                            name="deliveryLocation.state"
+                          <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                          <AutoComplete
                             value={values.deliveryLocation.state}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                          >
-                            <option value="">Select State</option>
-                            <option value="California">California</option>
-                          </select>
-                          <span className="text-sm text-red-600">
-                            {errors.deliveryLocation?.state &&
-                              touched.deliveryLocation?.state &&
-                              errors.deliveryLocation.state}
-                          </span>
+                            suggestions={filteredDeliveryStates}
+                            completeMethod={searchDeliveryStates}
+                            onChange={(e) => setFieldValue("deliveryLocation.state", e.value)}
+                            dropdown
+                            placeholder="Select or type state"
+                            inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                            className="w-full max-w-[220px]"
+                            panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                            itemTemplate={(item) => (
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            )}
+                          />
+                          <span className="text-sm text-red-600">{errors.deliveryLocation?.state && touched.deliveryLocation?.state && errors.deliveryLocation.state}</span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Zipcode
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
                           <input
                             type="text"
                             name="deliveryLocation.zipcode"
@@ -800,15 +837,10 @@ function Orders({ loader, user }) {
                             maxLength={5}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                           />
-                          <span className="text-sm text-red-600">
-                            {errors.deliveryLocation?.zipcode &&
-                              touched.deliveryLocation?.zipcode &&
-                              errors.deliveryLocation.zipcode}
-                          </span>
+                          <span className="text-sm text-red-600">{errors.deliveryLocation?.zipcode && touched.deliveryLocation?.zipcode && errors.deliveryLocation.zipcode}</span>
                         </div>
                       </div>
                     </div>
-
                     {user?.role === "ADMIN" && (
                       <div className="my-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

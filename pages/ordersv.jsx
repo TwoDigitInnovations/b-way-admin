@@ -440,7 +440,13 @@ function Orders({ loader, user }) {
             field="items"
             header="Item(s)"
             bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
-            body={(rowData) => <span>{rowData.items || "N/A"}</span>}
+            body={(rowData) => (
+              <span>
+                {Array.isArray(rowData.items)
+                  ? rowData.items.map(item => item?.name).join(', ')
+                  : rowData.items?.name || "N/A"}
+              </span>
+            )}
             style={{ width: "80px" }}
           />
           <Column

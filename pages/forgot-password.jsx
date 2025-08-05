@@ -76,7 +76,7 @@ export default function BWayLoginPage({ loader }) {
           {/* Sign In Form */}
           <div className="mt-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center lg:text-left">
-              Sign in
+              Forgot Password
             </h2>
 
             <Formik
@@ -120,7 +120,7 @@ export default function BWayLoginPage({ loader }) {
                   </div>
 
                   {/* Password Field */}
-                  <div>
+                  {/* <div>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 h-5 w-5" />
                       <input
@@ -153,11 +153,11 @@ export default function BWayLoginPage({ loader }) {
                         {errors.password}
                       </p>
                     )}
-                  </div>
+                  </div> */}
 
                   {/* Remember Me & Forgot Password */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center cursor-pointer">
+                    {/* <div className="flex items-center cursor-pointer">
                       <input
                         id="remember-me"
                         name="rememberMe"
@@ -172,13 +172,14 @@ export default function BWayLoginPage({ loader }) {
                       >
                         Remember me
                       </label>
-                    </div>
+                    </div> */}
+                    <div></div>
                     <div className="text-sm">
                       <Link
-                        href="/forgot-password"
+                        href="/"
                         className="text-gray-600 hover:text-secondary transition-colors"
                       >
-                        Forgot Password?
+                        Login instead?
                       </Link>
                     </div>
                   </div>
@@ -193,7 +194,7 @@ export default function BWayLoginPage({ loader }) {
                         : "bg-[#FF4B00] cursor-pointer hover:bg-[#e63e00]"
                     } transition-colors duration-200`}
                   >
-                    {isSubmitting ? "Signing in..." : "Login"}
+                    {isSubmitting ? "Signing in..." : "Send Reset Link"}
                   </button>
                 </form>
               )}

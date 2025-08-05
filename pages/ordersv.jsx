@@ -161,7 +161,7 @@ function Orders({ loader, user }) {
             icon: <UserPlus className="w-5 h-5 text-gray-500" />,
             command: () => {
               console.log("Assign clicked", order);
-              handleAssign(order)
+              handleAssign(order);
             },
           },
         ]
@@ -271,7 +271,7 @@ function Orders({ loader, user }) {
   const handleAssign = (order) => {
     setAssignModal(true);
     setSelectedOrder(order);
-  }
+  };
 
   const assignRoute = () => {
     if (!selectedRoute) {
@@ -281,15 +281,17 @@ function Orders({ loader, user }) {
 
     loader(true);
     const data = {
-      route: selectedRoute
-    }
+      route: selectedRoute,
+    };
     Api("PUT", `/order/${selectedOrder._id}`, data, router)
       .then((res) => {
         if (res.status) {
           toast.success("Route assigned successfully.");
           setOrders((prevOrders) =>
             prevOrders.map((order) =>
-              order._id === selectedOrder._id ? { ...order, route: selectedRoute } : order
+              order._id === selectedOrder._id
+                ? { ...order, route: selectedRoute }
+                : order
             )
           );
           fetchOrders(false); // Refresh orders list
@@ -411,6 +413,7 @@ function Orders({ loader, user }) {
             field="items"
             header="Item(s)"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => <span>{rowData.items.name || "N/A"}</span>}
           />
           <Column
             field="qty"
@@ -608,86 +611,88 @@ function Orders({ loader, user }) {
                     </div>
 
                     {/* Pickup Location Section */}
-                    <div className="mb-6">
-                      <h3 className="text-md font-semibold text-[#003C72] mb-3">
-                        Pickup Location
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Address
-                          </label>
-                          <input
-                            type="text"
-                            name="pickupLocation.address"
-                            value={values.pickupLocation.address}
-                            onChange={handleChange}
-                            placeholder="Address"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                          />
-                          <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.address &&
-                              touched.pickupLocation?.address &&
-                              errors.pickupLocation.address}
-                          </span>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            City
-                          </label>
-                          <input
-                            type="text"
-                            name="pickupLocation.city"
-                            value={values.pickupLocation.city}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                            placeholder="City"
-                          />
-                          <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.city &&
-                              touched.pickupLocation?.city &&
-                              errors.pickupLocation.city}
-                          </span>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            State
-                          </label>
-                          <input
-                            type="text"
-                            name="pickupLocation.state"
-                            value={values.pickupLocation.state}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                            placeholder="State"
-                          />
-                          <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.state &&
-                              touched.pickupLocation?.state &&
-                              errors.pickupLocation.state}
-                          </span>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Zipcode
-                          </label>
-                          <input
-                            type="text"
-                            name="pickupLocation.zipcode"
-                            value={values.pickupLocation.zipcode}
-                            onChange={handleChange}
-                            placeholder="Zipcode"
-                            maxLength={5}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                          />
-                          <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.zipcode &&
-                              touched.pickupLocation?.zipcode &&
-                              errors.pickupLocation.zipcode}
-                          </span>
+                    {user?.role === "ADMIN" && (
+                      <div className="mb-6">
+                        <h3 className="text-md font-semibold text-[#003C72] mb-3">
+                          Pickup Location
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Address
+                            </label>
+                            <input
+                              type="text"
+                              name="pickupLocation.address"
+                              value={values.pickupLocation.address}
+                              onChange={handleChange}
+                              placeholder="Address"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                            />
+                            <span className="text-sm text-red-600">
+                              {errors.pickupLocation?.address &&
+                                touched.pickupLocation?.address &&
+                                errors.pickupLocation.address}
+                            </span>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              City
+                            </label>
+                            <input
+                              type="text"
+                              name="pickupLocation.city"
+                              value={values.pickupLocation.city}
+                              onChange={handleChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                              placeholder="City"
+                            />
+                            <span className="text-sm text-red-600">
+                              {errors.pickupLocation?.city &&
+                                touched.pickupLocation?.city &&
+                                errors.pickupLocation.city}
+                            </span>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              State
+                            </label>
+                            <input
+                              type="text"
+                              name="pickupLocation.state"
+                              value={values.pickupLocation.state}
+                              onChange={handleChange}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                              placeholder="State"
+                            />
+                            <span className="text-sm text-red-600">
+                              {errors.pickupLocation?.state &&
+                                touched.pickupLocation?.state &&
+                                errors.pickupLocation.state}
+                            </span>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Zipcode
+                            </label>
+                            <input
+                              type="text"
+                              name="pickupLocation.zipcode"
+                              value={values.pickupLocation.zipcode}
+                              onChange={handleChange}
+                              placeholder="Zipcode"
+                              maxLength={5}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                            />
+                            <span className="text-sm text-red-600">
+                              {errors.pickupLocation?.zipcode &&
+                                touched.pickupLocation?.zipcode &&
+                                errors.pickupLocation.zipcode}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Delivery Location Section */}
                     <div className="mb-6">
@@ -979,68 +984,70 @@ function Orders({ loader, user }) {
         </div>
       )}
 
-      {assignModal && (<div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-          {/* Modal Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Assign Route</h2>
-            <button
-              onClick={() => {
-                setAssignModal(false);
-                setSelectedOrder(null);
-              }}
-              className="p-2 hover:bg-gray-100 rounded-full"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-          <div className="p-4 sm:p-6">
-            {/* Item(S) and Qty Row */}
-            <div className="grid gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                 Route
-                </label>
-                <select
-                  name="route"
-                  value={selectedRoute}
-                  onChange={(e) => setSelectedRoute(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700 disabled:bg-gray-100"
-                >
-                  <option value="">
-                    {loading ? "Loading routes..." : "Select Route"}
-                  </option>
-                  {routes && routes.length > 0 ? (
-                    routes.map((item) => (
-                      <option key={item._id} value={item._id}>
-                        {item.routeName}
-                      </option>
-                    ))
-                  ) : (
-                    !loading && (
-                      <option value="" disabled>
-                        No routes available
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
+      {assignModal && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Assign Route
+              </h2>
+              <button
+                onClick={() => {
+                  setAssignModal(false);
+                  setSelectedOrder(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              {/* Item(S) and Qty Row */}
+              <div className="grid gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Route
+                  </label>
+                  <select
+                    name="route"
+                    value={selectedRoute}
+                    onChange={(e) => setSelectedRoute(e.target.value)}
+                    disabled={loading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700 disabled:bg-gray-100"
+                  >
+                    <option value="">
+                      {loading ? "Loading routes..." : "Select Route"}
+                    </option>
+                    {routes && routes.length > 0
+                      ? routes.map((item) => (
+                          <option key={item._id} value={item._id}>
+                            {item.routeName}
+                          </option>
+                        ))
+                      : !loading && (
+                          <option value="" disabled>
+                            No routes available
+                          </option>
+                        )}
+                  </select>
+                </div>
 
-              {/* Submit Button */}
-              <div className="flex w-full">
-                <button
-                  onClick={assignRoute}
-                  type="submit"
-                  className="bg-secondary w-full hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors"
-                >
-                  Assign Route
-                </button>
+                {/* Submit Button */}
+                <div className="flex w-full">
+                  <button
+                    onClick={assignRoute}
+                    type="submit"
+                    className="bg-secondary w-full hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors"
+                  >
+                    Assign Route
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>)}
+      )}
     </Layout>
   );
 }

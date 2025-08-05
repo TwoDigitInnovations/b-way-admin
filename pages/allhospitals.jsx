@@ -91,9 +91,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-[#003C72]">
-            {mode === "add"
-              ? "Add Hospital"
-              : "Edit Hospital"}
+            {mode === "add" ? "Add Hospital" : "Edit Hospital"}
           </h2>
           <button
             onClick={onClose}
@@ -297,13 +295,17 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
 }
 
 // Main Component
-function HospitalsFacilities({loader}) {
+function HospitalsFacilities({ loader }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add");
   const [selectedFacility, setSelectedFacility] = useState(null);
-  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const limit = 10;
+
   const menuRef = useRef(null);
   const [selectedRowData, setSelectedRowData] = useState(null);
 
@@ -380,10 +382,14 @@ function HospitalsFacilities({loader}) {
 
   useEffect(() => {
     loader(true);
-    Api("GET", "/auth/USER")
+    Api("GET", "/auth/USER?page=" + currentPage + "&limit=" + limit)
       .then((response) => {
         if (response.status) {
           setFacilities(response.data);
+          setTotalRecords(response.total);
+          setTotalPages(response.totalPages);
+          setCurrentPage(response.page);
+          console.log("Facilities fetched successfully:", response.data);
         } else {
           console.error("Failed to fetch facilities:", response.message);
         }
@@ -394,7 +400,11 @@ function HospitalsFacilities({loader}) {
       .finally(() => {
         loader(false);
       });
-  }, []);
+  }, [currentPage, limit]);
+
+  const handlePageChange = (event) => {
+    setCurrentPage(event.page + 1);
+  };
 
   return (
     <Layout title="All Hospitals & Facilities">
@@ -421,13 +431,12 @@ function HospitalsFacilities({loader}) {
           tableStyle={{ minWidth: "50rem" }}
           rowClassName={() => "hover:bg-gray-50"}
           size="small"
-          // style={{ overflow: "visible" }}
-          // scrollable={false}
-          // columnResizeMode="expand"
-          // resizableColumns
           paginator
-          rows={10}
-          // rowsPerPageOptions={[5, 10, 25, 50]}
+          rows={limit}
+          totalRecords={totalRecords}
+          first={(currentPage - 1) * limit}
+          lazy
+          onPage={handlePageChange}
         >
           <Column
             field="index"
@@ -463,7 +472,7 @@ function HospitalsFacilities({loader}) {
             header="Assigned Route"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
-              <span className="text-gray-600">
+              <span>
                 {rowData.assignedRoute || "N/A"}
               </span>
             )}
@@ -473,7 +482,7 @@ function HospitalsFacilities({loader}) {
             header="Delivery Window"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
-              <span className="text-gray-600">
+              <span>
                 {rowData.deliveryWindow || "2AM - 6PM"}
               </span>
             )}

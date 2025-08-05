@@ -17,6 +17,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
+import { Api } from "@/helper/service";
 
 function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   const [formData, setFormData] = useState({
@@ -183,7 +184,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   );
 }
 
-function AllDispatchers() {
+function AllDispatchers({loader}) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuRef = useRef(null);
@@ -191,6 +192,11 @@ function AllDispatchers() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add");
   const [selectedFacility, setSelectedFacility] = useState(null);
+  const [dispatchersData, setDispatchersData] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const limit = 10;
 
   const handleModalSubmit = (formData) => {
     if (modalMode === "add") {
@@ -248,89 +254,6 @@ function AllDispatchers() {
     },
   ];
 
-  const dispatchersData = [
-    {
-      no: 1,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Dispatcher",
-      status: "Inactive",
-    },
-    {
-      no: 2,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Admin",
-      status: "Active",
-    },
-    {
-      no: 3,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Dispatcher",
-      status: "Inactive",
-    },
-    {
-      no: 4,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Admin",
-      status: "Active",
-    },
-    {
-      no: 5,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Dispatcher",
-      status: "Inactive",
-    },
-    {
-      no: 6,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Admin",
-      status: "Active",
-    },
-    {
-      no: 7,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Dispatcher",
-      status: "Inactive",
-    },
-    {
-      no: 8,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Admin",
-      status: "Active",
-    },
-    {
-      no: 9,
-      name: "David M.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Dispatcher",
-      status: "Inactive",
-    },
-    {
-      no: 10,
-      name: "Carla G.",
-      email: "info@example.com",
-      phone: "000-000-0000",
-      role: "Admin",
-      status: "Active",
-    },
-  ];
-
   const getStatusStyle = (status) => {
     const statusStyles = {
       Active: "bg-green-100 text-green-800 border border-green-200",
@@ -361,6 +284,32 @@ function AllDispatchers() {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    loader(true);
+    Api("GET", "/auth/DISPATCHER?page=" + currentPage + "&limit=" + limit)
+      .then((response) => {
+        if (response.status) {
+          setDispatchersData(response.data);
+          setTotalPages(response.totalPages);
+          setTotalRecords(response.total);
+          setCurrentPage(response.page);
+          console.log("Dispatchers fetched successfully:", response.data);
+        } else {
+          console.error("Failed to fetch dispatchers:", response.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching dispatchers:", error);
+      })
+      .finally(() => {
+        loader(false);
+      });
+  }, [currentPage, limit]);
+
+  const handlePageChange = (event) => {
+    setCurrentPage(event.page + 1);
+  };
+
   return (
     <Layout title="All Dispatchers">
       {/* Main Content */}
@@ -385,16 +334,15 @@ function AllDispatchers() {
           tableStyle={{ minWidth: "50rem" }}
           rowClassName={() => "hover:bg-gray-50"}
           size="small"
-          // style={{ overflow: "visible" }}
-          // scrollable={false}
-          // columnResizeMode="expand"
-          // resizableColumns
           paginator
-          rows={10}
-          // rowsPerPageOptions={[5, 10, 25, 50]}
+          rows={limit}
+          totalRecords={totalRecords}
+          first={(currentPage - 1) * limit}
+          lazy
+          onPage={handlePageChange}
         >
           <Column
-            field="no"
+            field="index"
             header="No."
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
           />
@@ -424,7 +372,8 @@ function AllDispatchers() {
           <Column
             field="status"
             header="Status"
-            body={(rowData) => getStatusStyle(rowData.status)}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => getStatusStyle(rowData.status || "Active")}
           />
           <Column
             header="Action"

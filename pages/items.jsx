@@ -72,13 +72,17 @@ function Items({ loader, user }) {
         .matches(/^\d{5}$/, "Zip code must be exactly 5 digits")
         .required("Zip code is required"),
     }),
-    status: Yup.string().required("Status is required"),
+    status: Yup.string().when('$userRole', {
+      is: 'ADMIN',
+      then: (schema) => schema.required("Status is required"),
+      otherwise: (schema) => schema.optional(),
+    }),
   });
 
   const handleSubmitItem = (values, { resetForm }) => {
     loader(true);
 
-    // Transform the data to match backend expectations
+    
     const itemData = {
       name: values.name,
       description: values.description,
@@ -94,10 +98,23 @@ function Items({ loader, user }) {
       status: values.status,
     };
 
+   
+    if (user.role === "ADMIN" && values.dispatcher) {
+      // Admin assigns dispatcher
+      itemData.dispatcher = values.dispatcher;
+    } else if (user.role === "DISPATCHER") {
+     
+      itemData.status = "Available";
+    }
+
     const isEditing = selectedItem && selectedItem._id;
     const method = isEditing ? "PUT" : "POST";
     const url = isEditing ? `/item/${selectedItem._id}` : "/item/create";
     const successMessage = isEditing ? "Item updated successfully!" : "Item created successfully!";
+
+    console.log("Submitting item data:", itemData);
+    console.log("API URL:", url);
+    console.log("Method:", method);
 
     Api(method, url, itemData, router)
       .then((response) => {
@@ -265,6 +282,8 @@ function Items({ loader, user }) {
   };
 
   const openAddModal = () => {
+    console.log("Add New button clicked");
+    console.log("User role:", user?.role);
     setSelectedItem(null);
     setShowEditModal(true);
   };
@@ -463,9 +482,10 @@ function Items({ loader, user }) {
                   state: selectedItem?.pickupLocation?.state || "",
                   zipCode: selectedItem?.pickupLocation?.zipCode || "",
                 },
-                status: selectedItem?.status || "",
+                status: selectedItem?.status || (user?.role === "DISPATCHER" ? "Available" : ""),
               }}
               validationSchema={validationSchema}
+              validationContext={{ userRole: user?.role }}
               onSubmit={handleSubmitItem}
               enableReinitialize={true} // Allow form to reinitialize when initialValues change
             >

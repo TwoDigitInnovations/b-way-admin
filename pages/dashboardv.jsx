@@ -1,5 +1,5 @@
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -37,13 +37,39 @@ import Investor from "@/components/Investor";
 import { useRouter } from "next/router";
 import Layout from "@/components/layout";
 import isAuth from "@/components/isAuth";
+import { Api } from "@/helper/service";
 
 function Dashboard({user}) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("operational");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const router = useRouter();
+
+  // Fetch recent orders
+  const fetchRecentOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await Api("GET", "/order/recent?limit=6", null, router);
+      
+      if (response?.status) {
+        setRecentOrders(response.data);
+      } else {
+        console.error("Failed to fetch recent orders:", response?.message);
+      }
+    } catch (error) {
+      console.error("Error fetching recent orders:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch recent orders on component mount
+  useEffect(() => {
+    fetchRecentOrders();
+  }, []);
 
   const statsCards = [
     {
@@ -172,80 +198,8 @@ function Dashboard({user}) {
     { name: "2022", delivered: 28000, pending: 8000 },
   ];
 
-  const orders = [
-    {
-      no: 1,
-      facilityName: "NYU Langone",
-      orderId: "ORD-20943",
-      items: "IV Admixture - Carthe",
-      qty: 12,
-      status: "Hold",
-      statusColor: "bg-red-100 text-red-800",
-      assignedDriver: "David M.",
-      route: "Carla G.",
-      eta: "2:10 PM",
-    },
-    {
-      no: 2,
-      facilityName: "Columbia Peds",
-      orderId: "ORD-20943",
-      items: "IV Admixture",
-      qty: 20,
-      status: "Pending",
-      statusColor: "bg-yellow-100 text-yellow-800",
-      assignedDriver: "Carla G.",
-      route: "David M.",
-      eta: "8:52 PM",
-    },
-    {
-      no: 3,
-      facilityName: "Oxford Hospital",
-      orderId: "ORD-20943",
-      items: "IV Admixture",
-      qty: 15,
-      status: "Active",
-      statusColor: "bg-green-100 text-green-800",
-      assignedDriver: "David J.",
-      route: "Carlin D.",
-      eta: "8:52 AM",
-    },
-    {
-      no: 4,
-      facilityName: "Jammu Hospital",
-      orderId: "ORD-20943",
-      items: "IV Admixture - NOU",
-      qty: 10,
-      status: "Hold",
-      statusColor: "bg-red-100 text-red-800",
-      assignedDriver: "Carlin D.",
-      route: "David M.",
-      eta: "8:52 PM",
-    },
-    {
-      no: 5,
-      facilityName: "Bellevue Hospital",
-      orderId: "ORD-20943",
-      items: "IV Admixture - Carthe",
-      qty: 12,
-      status: "Pending",
-      statusColor: "bg-yellow-100 text-yellow-800",
-      assignedDriver: "David M.",
-      route: "Carla G.",
-      eta: "8:52 AM",
-    },
-    {
-      no: 6,
-      facilityName: "Retanice Logist",
-      orderId: "ORD-20943",
-      items: "IV Osortorua",
-      qty: 50,
-      status: "Active",
-      statusColor: "bg-green-100 text-green-800",
-      assignedDriver: "Carla G.",
-      route: "David J.",
-      eta: "8:52 AM",
-    },
-  ];
+  // Use dynamic recent orders instead of static data
+  const orders = recentOrders;
 
   return (
     <Layout title="Dashboard">
@@ -283,6 +237,7 @@ function Dashboard({user}) {
           deliveriesData={deliveriesData}
           actionButtons={actionButtons}
           orders={orders}
+          loading={loading}
         />
       ) : (
         <Investor

@@ -396,7 +396,7 @@ function Orders({ loader, user }) {
         <DataTable
           value={orders}
           stripedRows
-          tableStyle={{ minWidth: "50rem" }}
+          tableStyle={{ minWidth: "30rem" }}
           rowClassName={() => "hover:bg-gray-50"}
           size="small"
           paginator
@@ -409,7 +409,8 @@ function Orders({ loader, user }) {
           <Column
             field="index"
             header="No."
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
+            style={{ width: "40px" }}
           />
           <Column
             field="orderId"
@@ -418,41 +419,40 @@ function Orders({ loader, user }) {
               color: "#F97316",
               fontWeight: 500,
               verticalAlign: "middle",
-              fontSize: "14px",
+              fontSize: "12px",
             }}
-            body={(rowData) => {
-              console.log("Row data for facility name:", rowData);
-              console.log("User data:", rowData.user);
-              console.log("User role:", user?.role);
-              return (
-                <div>
-                  <div style={{ color: "#F97316", fontWeight: 500 }}>
-                    {rowData.orderId}
-                  </div>
-                  {user?.role === "ADMIN" && rowData.user && (
-                    <div style={{ fontSize: "12px", color: "#6B7280", marginTop: "2px" }}>
-                      {rowData.user.name}
-                    </div>
-                  )}
-                </div>
-              );
-            }}
+            style={{ width: "90px" }}
           />
+          {user?.role === "ADMIN" && (
+            <Column
+              field="facilityName"
+              header="Facility"
+              bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
+              body={(rowData) => (
+                <span style={{ color: "#374151", fontWeight: 500 }}>
+                  {rowData.user?.name || "N/A"}
+                </span>
+              )}
+              style={{ width: "80px" }}
+            />
+          )}
           <Column
             field="items"
             header="Item(s)"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-            body={(rowData) => <span>{rowData.items.name || "N/A"}</span>}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
+            body={(rowData) => <span>{rowData.items || "N/A"}</span>}
+            style={{ width: "80px" }}
           />
           <Column
             field="qty"
             header="Qty"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
+            style={{ width: "50px" }}
           />
           <Column
             field="pickupLocation"
-            header="Pickup Location"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            header="Pickup"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
             body={(rowData) => (
               <span>
                 {rowData?.pickupLocation
@@ -460,33 +460,38 @@ function Orders({ loader, user }) {
                   : "N/A"}
               </span>
             )}
+            style={{ width: "120px" }}
           />
           <Column
             field="deliveryLocation"
-            header="Delivery Location"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            header="Delivery"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
             body={(rowData) => (
               <span>{rowData?.deliveryLocation?.address}</span>
             )}
+            style={{ width: "120px" }}
           />
           <Column
             field="route"
             header="Route"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
             body={(rowData) => (
               <span>{rowData?.route ? rowData?.route?.routeName : "N/A"}</span>
             )}
+            style={{ width: "100px" }}
           />
           <Column
             field="status"
             header="Status"
             body={(rowData) => getStatusBadge(rowData.status)}
+            style={{ width: "80px" }}
           />
           <Column
             field="eta"
             header="ETA"
-            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            bodyStyle={{ verticalAlign: "middle", fontSize: "12px" }}
             body={(rowData) => <span>{rowData.eta ? rowData.eta : "N/A"}</span>}
+            style={{ width: "60px" }}
           />
           <Column
             header="Action"
@@ -496,6 +501,7 @@ function Orders({ loader, user }) {
               overflow: "visible",
               position: "relative",
             }}
+            style={{ width: "60px" }}
             body={(rowData, options) => (
               <div className="relative flex justify-center">
                 <button
@@ -599,7 +605,7 @@ function Orders({ loader, user }) {
                   {/* Modal Content */}
                   <div className="p-4 sm:p-6">
                     {/* Item(S) and Qty Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Item(S)
@@ -637,7 +643,7 @@ function Orders({ loader, user }) {
                           {errors.qty && touched.qty && errors.qty}
                         </span>
                       </div>
-                    </div>
+                    </div> */}
 
                     {/* Pickup Location Section */}
                     {user?.role === "ADMIN" && (
@@ -901,7 +907,7 @@ function Orders({ loader, user }) {
                       {selectedOrder.orderId || "N/A"}
                     </dd>
                   </div>
-                  {user?.role === "ADMIN" && selectedOrder.user && (
+                  {selectedOrder.user && (
                     <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
                       <dt className="text-sm font-medium text-gray-500">
                         Facility Name

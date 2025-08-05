@@ -18,6 +18,7 @@ export default function Operational({
   deliveriesData,
   actionButtons,
   orders,
+  loading = false,
 }) {
   const [user, setUser] = useContext(userContext);
 
@@ -272,20 +273,26 @@ export default function Operational({
               </div>
 
               <div className="overflow-hidden">
-                <DataTable
-                  value={orders}
-                  stripedRows
-                  tableStyle={{ minWidth: "50rem" }}
-                  rowClassName={() => "hover:bg-gray-50"}
-                  size="small"
-                  // style={{ overflow: "visible" }}
-                  // scrollable={false}
-                  // columnResizeMode="expand"
-                  // resizableColumns
-                  // paginator
-                  // rows={10}
-                  // rowsPerPageOptions={[5, 10, 25, 50]}
-                >
+                {loading ? (
+                  <div className="p-8 text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#003C72]"></div>
+                    <p className="mt-2 text-gray-600">Loading recent orders...</p>
+                  </div>
+                ) : orders && orders.length > 0 ? (
+                  <DataTable
+                    value={orders}
+                    stripedRows
+                    tableStyle={{ minWidth: "50rem" }}
+                    rowClassName={() => "hover:bg-gray-50"}
+                    size="small"
+                    // style={{ overflow: "visible" }}
+                    // scrollable={false}
+                    // columnResizeMode="expand"
+                    // resizableColumns
+                    // paginator
+                    // rows={10}
+                    // rowsPerPageOptions={[5, 10, 25, 50]}
+                  >
                   <Column
                     field="no"
                     header="No."
@@ -336,11 +343,6 @@ export default function Operational({
                     bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
                   />
                   <Column
-                    field="route"
-                    header="Route"
-                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-                  />
-                  <Column
                     field="eta"
                     header="ETA"
                     bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
@@ -371,6 +373,11 @@ export default function Operational({
                     )}
                   />
                 </DataTable>
+                ) : (
+                  <div className="p-8 text-center">
+                    <p className="text-gray-600">No recent orders found.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

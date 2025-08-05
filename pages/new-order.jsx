@@ -125,7 +125,7 @@ export default function NewOrder({ loader }) {
   const searchStates = (event) => {
     let filtered = [];
     if (event.query.length === 0) {
-      filtered = allStates; // Show all states when no query
+      filtered = allStates;
     } else {
       filtered = allStates.filter((state) =>
         state.toLowerCase().includes(event.query.toLowerCase())
@@ -134,7 +134,6 @@ export default function NewOrder({ loader }) {
     setFilteredStates(filtered);
   };
 
-  // Autocomplete search for items
   const searchItems = (event) => {
     let filtered = [];
     if (!event.query || event.query.length === 0) {

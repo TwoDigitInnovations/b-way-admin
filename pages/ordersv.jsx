@@ -29,9 +29,9 @@ import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchDrivers } from "@/store/driverSlice";
 import { fetchRoutes } from "@/store/routeSlice";
-import items from "../utils/items.json";
 import { AutoComplete } from "primereact/autocomplete";
 import { getStateAndCityPicklist } from "@/utils/states";
+import { fetchItems } from "@/store/itemSlice";
 
 function Orders({ loader, user }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -48,26 +48,38 @@ function Orders({ loader, user }) {
   const [totalOrders, setTotalOrders] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRoute, setSelectedRoute] = useState("");
+  const [itemInput, setItemInput] = useState("");
   const [limit] = useState(10);
-  const router = useRouter();
-  const dispatch = useDispatch();
   const { routes, assignedRoute, loading, error } = useSelector(
     (state) => state.route
   );
+  const dispatch = useDispatch();
+  const router = useRouter();
+  const { items } = useSelector((state) => state.item);
 
   const statesAndCities = getStateAndCityPicklist();
   const allCities = Object.values(statesAndCities).flat();
   const allStates = Object.keys(statesAndCities);
   const [filteredPickupCities, setFilteredPickupCities] = useState(allCities);
   const [filteredPickupStates, setFilteredPickupStates] = useState(allStates);
-  const [filteredDeliveryCities, setFilteredDeliveryCities] = useState(allCities);
-  const [filteredDeliveryStates, setFilteredDeliveryStates] = useState(allStates);
-  const [filteredItems, setFilteredItems] = useState(items.items || []);
+  const [filteredDeliveryCities, setFilteredDeliveryCities] =
+    useState(allCities);
+  const [filteredDeliveryStates, setFilteredDeliveryStates] =
+    useState(allStates);
+  const [filteredItems, setFilteredItems] = useState([]);
 
   useEffect(() => {
     dispatch(fetchRoutes({ page: 0, limit: 0 }));
+    dispatch(fetchItems());
     console.log("Routes fetched");
   }, [dispatch]);
+
+  // Initialize filtered items when items are loaded
+  useEffect(() => {
+    if (items && Array.isArray(items)) {
+      setFilteredItems(items);
+    }
+  }, [items]);
 
   // Add useEffect to log routes when they change
   useEffect(() => {
@@ -80,7 +92,8 @@ function Orders({ loader, user }) {
     items: Yup.string().required("Item(s) is required"),
     qty: Yup.number()
       .required("Quantity is required")
-      .min(1, "Must be at least 1"),
+      .min(1, "Must be at least 1")
+      .positive("Quantity must be positive"),
     pickupLocation: Yup.object({
       address: Yup.string().required("Pickup address is required"),
       city: Yup.string().required("Pickup city is required"),
@@ -97,9 +110,11 @@ function Orders({ loader, user }) {
         .matches(/^\d{5}$/, "Delivery zipcode must be exactly 5 digits")
         .required("Delivery zipcode is required"),
     }),
-    // route: Yup.string().required("Route is required"),
-    // eta: Yup.string().required("ETA is required"),
-    // status: Yup.string().required("Status is required"),
+    status: Yup.string().when([], {
+      is: () => user?.role === "ADMIN",
+      then: (schema) => schema.required("Status is required"),
+      otherwise: (schema) => schema.notRequired(),
+    }),
   });
 
   const handleUpdateOrder = (values, { resetForm }) => {
@@ -108,7 +123,7 @@ function Orders({ loader, user }) {
     // Transform the data to match backend expectations
     const orderData = {
       items: values.items,
-      qty: values.qty,
+      qty: parseInt(values.qty, 10),
       pickupLocation: {
         address: values.pickupLocation.address,
         city: values.pickupLocation.city,
@@ -121,9 +136,8 @@ function Orders({ loader, user }) {
         state: values.deliveryLocation.state,
         zipcode: values.deliveryLocation.zipcode,
       },
-      // route: values.route,
-      eta: values.eta,
-      status: values.status,
+      ...(values.eta && { eta: values.eta }),
+      ...(values.status && { status: values.status }),
     };
 
     Api("PUT", `/order/${selectedOrder._id}`, orderData, router)
@@ -331,16 +345,12 @@ function Orders({ loader, user }) {
     }
     try {
       // Use user-specific endpoint for regular users, admin endpoint for admins
-      const endpoint = user?.role === "ADMIN" 
-        ? `/order?page=${currentPage}&limit=${limit}`
-        : `/order/my-orders?page=${currentPage}&limit=${limit}`;
-      
-      const response = await Api(
-        "GET",
-        endpoint,
-        null,
-        router
-      );
+      const endpoint =
+        user?.role === "ADMIN"
+          ? `/order?page=${currentPage}&limit=${limit}`
+          : `/order/my-orders?page=${currentPage}&limit=${limit}`;
+
+      const response = await Api("GET", endpoint, null, router);
 
       if (response.status) {
         setOrders(response.data);
@@ -445,10 +455,10 @@ function Orders({ loader, user }) {
   const searchItems = (event) => {
     let filtered = [];
     if (!event.query || event.query.length === 0) {
-      filtered = items.items || [];
+      filtered = items || [];
     } else {
-      filtered = (items.items || []).filter((item) =>
-        item.name.toLowerCase().includes(event.query.toLowerCase())
+      filtered = (items || []).filter((item) =>
+        item && item.name && item.name.toLowerCase().includes(event.query.toLowerCase())
       );
     }
     setFilteredItems(filtered);
@@ -512,7 +522,7 @@ function Orders({ loader, user }) {
             body={(rowData) => (
               <span>
                 {Array.isArray(rowData.items)
-                  ? rowData.items.map(item => item?.name).join(', ')
+                  ? rowData.items.map((item) => item?.name).join(", ")
                   : rowData.items?.name || "N/A"}
               </span>
             )}
@@ -639,7 +649,9 @@ function Orders({ loader, user }) {
             <Formik
               key={selectedOrder?._id || "new"} // Force reinitialize when order changes
               initialValues={{
-                items: selectedOrder?.items || "",
+                items: Array.isArray(selectedOrder?.items) 
+                  ? selectedOrder.items[0]?._id || ""
+                  : selectedOrder?.items?._id || selectedOrder?.items || "",
                 qty: selectedOrder?.qty || "",
                 pickupLocation: {
                   address: selectedOrder?.pickupLocation?.address || "",
@@ -654,7 +666,7 @@ function Orders({ loader, user }) {
                   zipcode: selectedOrder?.deliveryLocation?.zipcode || "",
                 },
                 route: selectedOrder?.route?._id || "",
-                status: selectedOrder.status || "",
+                status: selectedOrder?.status || "",
                 eta: selectedOrder?.eta || "",
               }}
               validationSchema={validationSchema}
@@ -676,26 +688,53 @@ function Orders({ loader, user }) {
                     {/* Item(S) and Qty Row */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Item(S)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Item(S)
+                        </label>
                         <AutoComplete
-                          value={filteredItems.find((item) => item._id === values.items) || null}
+                          value={
+                            // If values.items is an ID, find the item object
+                            typeof values.items === 'string' 
+                              ? filteredItems.find(item => item._id === values.items) || null
+                              : values.items || null
+                          }
                           suggestions={filteredItems}
                           completeMethod={searchItems}
+                          onDropdownClick={() => {
+                            if (items && Array.isArray(items)) {
+                              setFilteredItems(items);
+                            }
+                          }}
                           field="name"
-                          onChange={(e) => setFieldValue("items", e.value?._id || "")}
+                          onChange={(e) => {
+                            // Store the item ID in the form
+                            const selectedItem = e.value;
+                            setFieldValue("items", selectedItem?._id || "");
+                          }}
                           dropdown
                           placeholder="Select or type item"
                           inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
                           className="w-full max-w-[220px]"
                           panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                           itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item.name}</div>
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                              {item?.name || 'Unknown Item'}
+                            </div>
+                          )}
+                          emptyTemplate={() => (
+                            <div className="px-3 py-2 text-sm text-gray-500">
+                              No items found
+                            </div>
                           )}
                         />
-                        <span className="text-sm text-red-600">{errors.items && touched.items && errors.items}</span>
+                        <span className="text-sm text-red-600">
+                          {errors.items && touched.items && errors.items}
+                        </span>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Qty</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Qty
+                        </label>
                         <input
                           type="number"
                           name="qty"
@@ -704,15 +743,21 @@ function Orders({ loader, user }) {
                           placeholder="Qty"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                         />
-                        <span className="text-sm text-red-600">{errors.qty && touched.qty && errors.qty}</span>
+                        <span className="text-sm text-red-600">
+                          {errors.qty && touched.qty && errors.qty}
+                        </span>
                       </div>
                     </div>
                     {/* Pickup Location Section */}
                     <div className="mb-6">
-                      <h3 className="text-md font-semibold text-[#003C72] mb-3">Pickup Location</h3>
+                      <h3 className="text-md font-semibold text-[#003C72] mb-3">
+                        Pickup Location
+                      </h3>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Address
+                          </label>
                           <input
                             type="text"
                             name="pickupLocation.address"
@@ -721,46 +766,88 @@ function Orders({ loader, user }) {
                             placeholder="Address"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                           />
-                          <span className="text-sm text-red-600">{errors.pickupLocation?.address && touched.pickupLocation?.address && errors.pickupLocation.address}</span>
+                          <span className="text-sm text-red-600">
+                            {errors.pickupLocation?.address &&
+                              touched.pickupLocation?.address &&
+                              errors.pickupLocation.address}
+                          </span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            City
+                          </label>
                           <AutoComplete
                             value={values.pickupLocation.city}
                             suggestions={filteredPickupCities}
                             completeMethod={searchPickupCities}
-                            onChange={(e) => setFieldValue("pickupLocation.city", e.value)}
+                            onDropdownClick={() => {
+                              setFilteredPickupCities(allCities);
+                            }}
+                            onChange={(e) =>
+                              setFieldValue("pickupLocation.city", e.value)
+                            }
                             dropdown
                             placeholder="Select or type city"
                             inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
                             className="w-full max-w-[220px]"
                             panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                             itemTemplate={(item) => (
-                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                                {item}
+                              </div>
+                            )}
+                            emptyTemplate={() => (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No cities found
+                              </div>
                             )}
                           />
-                          <span className="text-sm text-red-600">{errors.pickupLocation?.city && touched.pickupLocation?.city && errors.pickupLocation.city}</span>
+                          <span className="text-sm text-red-600">
+                            {errors.pickupLocation?.city &&
+                              touched.pickupLocation?.city &&
+                              errors.pickupLocation.city}
+                          </span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            State
+                          </label>
                           <AutoComplete
                             value={values.pickupLocation.state}
                             suggestions={filteredPickupStates}
                             completeMethod={searchPickupStates}
-                            onChange={(e) => setFieldValue("pickupLocation.state", e.value)}
+                            onDropdownClick={() => {
+                              setFilteredPickupStates(allStates);
+                            }}
+                            onChange={(e) =>
+                              setFieldValue("pickupLocation.state", e.value)
+                            }
                             dropdown
                             placeholder="Select or type state"
                             inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
                             className="w-full max-w-[220px]"
                             panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                             itemTemplate={(item) => (
-                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                                {item}
+                              </div>
+                            )}
+                            emptyTemplate={() => (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No states found
+                              </div>
                             )}
                           />
-                          <span className="text-sm text-red-600">{errors.pickupLocation?.state && touched.pickupLocation?.state && errors.pickupLocation.state}</span>
+                          <span className="text-sm text-red-600">
+                            {errors.pickupLocation?.state &&
+                              touched.pickupLocation?.state &&
+                              errors.pickupLocation.state}
+                          </span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Zipcode
+                          </label>
                           <input
                             type="text"
                             name="pickupLocation.zipcode"
@@ -770,16 +857,24 @@ function Orders({ loader, user }) {
                             maxLength={5}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                           />
-                          <span className="text-sm text-red-600">{errors.pickupLocation?.zipcode && touched.pickupLocation?.zipcode && errors.pickupLocation.zipcode}</span>
+                          <span className="text-sm text-red-600">
+                            {errors.pickupLocation?.zipcode &&
+                              touched.pickupLocation?.zipcode &&
+                              errors.pickupLocation.zipcode}
+                          </span>
                         </div>
                       </div>
                     </div>
                     {/* Delivery Location Section */}
                     <div className="mb-6">
-                      <h3 className="text-md font-semibold text-[#003C72] mb-3">Delivery Location</h3>
+                      <h3 className="text-md font-semibold text-[#003C72] mb-3">
+                        Delivery Location
+                      </h3>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Address
+                          </label>
                           <input
                             type="text"
                             name="deliveryLocation.address"
@@ -788,46 +883,88 @@ function Orders({ loader, user }) {
                             placeholder="Address"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                           />
-                          <span className="text-sm text-red-600">{errors.deliveryLocation?.address && touched.deliveryLocation?.address && errors.deliveryLocation.address}</span>
+                          <span className="text-sm text-red-600">
+                            {errors.deliveryLocation?.address &&
+                              touched.deliveryLocation?.address &&
+                              errors.deliveryLocation.address}
+                          </span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            City
+                          </label>
                           <AutoComplete
                             value={values.deliveryLocation.city}
                             suggestions={filteredDeliveryCities}
                             completeMethod={searchDeliveryCities}
-                            onChange={(e) => setFieldValue("deliveryLocation.city", e.value)}
+                            onDropdownClick={() => {
+                              setFilteredDeliveryCities(allCities);
+                            }}
+                            onChange={(e) =>
+                              setFieldValue("deliveryLocation.city", e.value)
+                            }
                             dropdown
                             placeholder="Select or type city"
                             inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
                             className="w-full max-w-[220px]"
                             panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                             itemTemplate={(item) => (
-                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                                {item}
+                              </div>
+                            )}
+                            emptyTemplate={() => (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No cities found
+                              </div>
                             )}
                           />
-                          <span className="text-sm text-red-600">{errors.deliveryLocation?.city && touched.deliveryLocation?.city && errors.deliveryLocation.city}</span>
+                          <span className="text-sm text-red-600">
+                            {errors.deliveryLocation?.city &&
+                              touched.deliveryLocation?.city &&
+                              errors.deliveryLocation.city}
+                          </span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            State
+                          </label>
                           <AutoComplete
                             value={values.deliveryLocation.state}
                             suggestions={filteredDeliveryStates}
                             completeMethod={searchDeliveryStates}
-                            onChange={(e) => setFieldValue("deliveryLocation.state", e.value)}
+                            onDropdownClick={() => {
+                              setFilteredDeliveryStates(allStates);
+                            }}
+                            onChange={(e) =>
+                              setFieldValue("deliveryLocation.state", e.value)
+                            }
                             dropdown
                             placeholder="Select or type state"
                             inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
                             className="w-full max-w-[220px]"
                             panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                             itemTemplate={(item) => (
-                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                              <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                                {item}
+                              </div>
+                            )}
+                            emptyTemplate={() => (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No states found
+                              </div>
                             )}
                           />
-                          <span className="text-sm text-red-600">{errors.deliveryLocation?.state && touched.deliveryLocation?.state && errors.deliveryLocation.state}</span>
+                          <span className="text-sm text-red-600">
+                            {errors.deliveryLocation?.state &&
+                              touched.deliveryLocation?.state &&
+                              errors.deliveryLocation.state}
+                          </span>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Zipcode
+                          </label>
                           <input
                             type="text"
                             name="deliveryLocation.zipcode"
@@ -837,7 +974,11 @@ function Orders({ loader, user }) {
                             maxLength={5}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                           />
-                          <span className="text-sm text-red-600">{errors.deliveryLocation?.zipcode && touched.deliveryLocation?.zipcode && errors.deliveryLocation.zipcode}</span>
+                          <span className="text-sm text-red-600">
+                            {errors.deliveryLocation?.zipcode &&
+                              touched.deliveryLocation?.zipcode &&
+                              errors.deliveryLocation.zipcode}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -951,7 +1092,9 @@ function Orders({ loader, user }) {
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {Array.isArray(selectedOrder.items)
-                        ? selectedOrder.items.map(item => item?.name).join(', ')
+                        ? selectedOrder.items
+                            .map((item) => item?.name)
+                            .join(", ")
                         : selectedOrder.items?.name || "N/A"}
                     </dd>
                   </div>

@@ -349,12 +349,12 @@ function Orders({ loader, user }) {
     fetchOrders();
   }, [currentPage, limit]);
 
-  // Refetch orders when user changes
-  useEffect(() => {
-    if (user) {
-      fetchOrders();
-    }
-  }, [user]);
+  // // Refetch orders when user changes
+  // useEffect(() => {
+  //   if (user) {
+  //     fetchOrders();
+  //   }
+  // }, [user]);
 
   const handlePageChange = (event) => {
     setCurrentPage(event.page + 1);

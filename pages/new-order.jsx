@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, PlusIcon } from "lucide-react";
 import Layout from "@/components/layout";
 import { Formik } from "formik";
 import * as Yup from "yup";
@@ -21,9 +21,9 @@ export default function NewOrder({ loader }) {
   const allStates = Object.keys(statesAndCities);
   const [filteredCities, setFilteredCities] = useState([]);
   const [filteredStates, setFilteredStates] = useState([]);
-  const [selectedCity, setSelectedCity] = useState("");
-  const [selectedState, setSelectedState] = useState("");
-  const [detectedState, setDetectedState] = useState("");
+  // const [selectedCity, setSelectedCity] = useState("");
+  // const [selectedState, setSelectedState] = useState("");
+  // const [detectedState, setDetectedState] = useState("");
   const [filteredItems, setFilteredItems] = useState([]);
   const [itemInput, setItemInput] = useState("");
 
@@ -47,25 +47,25 @@ export default function NewOrder({ loader }) {
     //   .matches(/^\d{5}$/, "Pickup zipcode must be exactly 5 digits")
     //   .required("Pickup zipcode is required"),
     // }),
-    deliveryLocation: Yup.object({
-      address: Yup.string().required("Delivery address is required"),
-      city: Yup.string().required("Delivery city is required"),
-      state: Yup.string().required("Delivery state is required"),
-      zipcode: Yup.string()
-        .matches(/^\d{5}$/, "Delivery zipcode must be exactly 5 digits")
-        .required("Delivery zipcode is required"),
-    }),
+    // deliveryLocation: Yup.object({
+    //   address: Yup.string().required("Delivery address is required"),
+    //   city: Yup.string().required("Delivery city is required"),
+    //   state: Yup.string().required("Delivery state is required"),
+    //   zipcode: Yup.string()
+    //     .matches(/^\d{5}$/, "Delivery zipcode must be exactly 5 digits")
+    //     .required("Delivery zipcode is required"),
+    // }),
   });
 
   const initialValues = {
     items: "",
     qty: "",
-    deliveryLocation: {
-      address: "",
-      city: "",
-      state: "",
-      zipcode: "",
-    },
+    // deliveryLocation: {
+    //   address: "",
+    //   city: "",
+    //   state: "",
+    //   zipcode: "",
+    // },
   };
 
   const handleSubmit = (values, { resetForm }) => {
@@ -80,10 +80,10 @@ export default function NewOrder({ loader }) {
       pickupCity: selectedItemLocation.city,
       pickupState: selectedItemLocation.state,
       pickupZipcode: selectedItemLocation.zipcode,
-      deliveryLocation: values.deliveryLocation.address,
-      deliveryCity: values.deliveryLocation.city,
-      deliveryState: values.deliveryLocation.state,
-      deliveryZipcode: values.deliveryLocation.zipcode,
+      // deliveryLocation: values.deliveryLocation.address,
+      // deliveryCity: values.deliveryLocation.city,
+      // deliveryState: values.deliveryLocation.state,
+      // deliveryZipcode: values.deliveryLocation.zipcode,
     };
 
     Api("POST", "/order/create", orderData, router)
@@ -170,7 +170,7 @@ export default function NewOrder({ loader }) {
               </h2>
               <div className="p-4 sm:p-6">
                 {/* Item(S) and Qty Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-center">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Item(S)
@@ -192,7 +192,9 @@ export default function NewOrder({ loader }) {
                             value: selectedItem?._id || "",
                           },
                         });
-                        setSelectedItemLocation(selectedItem ? selectedItem.pickupLocation : null);
+                        setSelectedItemLocation(
+                          selectedItem ? selectedItem.pickupLocation : null
+                        );
                       }}
                       dropdown
                       placeholder="Select or type item"
@@ -227,8 +229,16 @@ export default function NewOrder({ loader }) {
                   </div>
                 </div>
 
+                {/* <button
+                  type="button"
+                  className="mb-6 bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors cursor-pointer h-10"
+                >
+                  <PlusIcon className="h-5 w-5 inline-block mr-2" />
+                  Add Item
+                </button> */}
+
                 {/* Delivery Location Section */}
-                <div className="mb-6">
+                {/* <div className="mb-6">
                   <h3 className="text-md font-semibold text-[#003C72] mb-3">
                     Delivery Location
                   </h3>
@@ -270,10 +280,10 @@ export default function NewOrder({ loader }) {
                               value: cityValue,
                             },
                           });
-                          setSelectedCity(cityValue);
+                          // setSelectedCity(cityValue);
                           if (cityValue) {
                             const state = getStateByCity(cityValue);
-                            setDetectedState(state);
+                            // setDetectedState(state);
                             if (state) {
                               handleChange({
                                 target: {
@@ -320,7 +330,7 @@ export default function NewOrder({ loader }) {
                               value: stateValue,
                             },
                           });
-                          setSelectedState(stateValue);
+                          // setSelectedState(stateValue);
                         }}
                         dropdown
                         placeholder="Select or type state"
@@ -359,7 +369,7 @@ export default function NewOrder({ loader }) {
                       </span>
                     </div>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Submit Button */}
                 <div className="flex justify-start">

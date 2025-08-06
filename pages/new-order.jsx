@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import { fetchItems } from "@/store/itemSlice";
 import { getStateAndCityPicklist, getStateByCity } from "@/utils/states";
 import { AutoComplete } from "primereact/autocomplete";
+import Dropdown from "@/components/dropDown";
 
 export default function NewOrder({ loader }) {
   const [selectedItems, setSelectedItems] = useState([]);
@@ -34,10 +35,11 @@ export default function NewOrder({ loader }) {
   }, [dispatch]);
 
   useEffect(() => {
-  if (items) {
-    setFilteredItems(items);
-  }
-}, [items]);
+    if (items?.length > 0) {
+      console.log("Items loaded:", items.length);
+      setFilteredItems(items); // Initialize with all items
+    }
+  }, [items]);
 
   const validationSchema = Yup.object({
     // Validation will be handled for the selectedItems array
@@ -59,7 +61,7 @@ export default function NewOrder({ loader }) {
       itemId: selectedCurrentItem._id,
       name: selectedCurrentItem.name,
       qty: parseInt(currentQty),
-      pickupLocation: selectedCurrentItem.pickupLocation
+      pickupLocation: selectedCurrentItem.pickupLocation,
     };
 
     setSelectedItems([...selectedItems, newItem]);
@@ -71,15 +73,17 @@ export default function NewOrder({ loader }) {
   };
 
   const removeItem = (itemId) => {
-    setSelectedItems(selectedItems.filter(item => item.id !== itemId));
+    setSelectedItems(selectedItems.filter((item) => item.id !== itemId));
     toast.success("Item removed successfully");
   };
 
   const updateItemQty = (itemId, newQty) => {
     if (newQty < 1) return;
-    setSelectedItems(selectedItems.map(item => 
-      item.id === itemId ? { ...item, qty: parseInt(newQty) } : item
-    ));
+    setSelectedItems(
+      selectedItems.map((item) =>
+        item.id === itemId ? { ...item, qty: parseInt(newQty) } : item
+      )
+    );
   };
 
   const handleSubmit = (values, { resetForm }) => {
@@ -93,14 +97,14 @@ export default function NewOrder({ loader }) {
 
     // Transform the data to match backend expectations
     const orderData = {
-      items: selectedItems.map(item => ({
+      items: selectedItems.map((item) => ({
         itemId: item.itemId,
         qty: item.qty,
         pickupLocation: item.pickupLocation.address,
         pickupCity: item.pickupLocation.city,
         pickupState: item.pickupLocation.state,
         pickupZipcode: item.pickupLocation.zipcode,
-      }))
+      })),
     };
 
     Api("POST", "/order/create", orderData, router)
@@ -154,15 +158,22 @@ export default function NewOrder({ loader }) {
   };
 
   const searchItems = (event) => {
-  if (!event.query || event.query.length === 0) {
-    setFilteredItems(items);
-  } else {
-    const filtered = items.filter((item) =>
-      item.name.toLowerCase().includes(event.query.toLowerCase())
-    );
-    setFilteredItems(filtered);
-  }
-};
+    const query = event.query?.toLowerCase() || "";
+    console.log("Search items called with query:", query);
+    
+    if (query === "" || !query) {
+      // When no query, show all items
+      setFilteredItems(items);
+    } else {
+      // Filter items based on query
+      const filtered = items.filter((item) => 
+        item.name.toLowerCase().includes(query)
+      );
+      setFilteredItems(filtered);
+    }
+    
+    console.log("Filtered items set:", filteredItems.length);
+  };
 
   return (
     <Layout title={"Create New Order"}>
@@ -192,11 +203,22 @@ export default function NewOrder({ loader }) {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Item(S)
                     </label>
-                    <AutoComplete
+                    <Dropdown data={items} value={selectedCurrentItem} onChange={setSelectedCurrentItem} />
+                    {/* <AutoComplete
                       value={currentItemInput}
-                      suggestions={filteredItems}
+                      suggestions={filteredItems?.length > 0 ? filteredItems : items}
                       completeMethod={searchItems}
                       field="name"
+                      onDropdownClick={() => {
+                        console.log("Dropdown clicked, setting all items");
+                        setFilteredItems(items || []);
+                      }}
+                      onFocus={() => {
+                        console.log("AutoComplete focused, ensuring items are available");
+                        if (!filteredItems || filteredItems.length === 0) {
+                          setFilteredItems(items || []);
+                        }
+                      }}
                       onChange={(e) => {
                         setCurrentItemInput(e.value);
                       }}
@@ -215,7 +237,7 @@ export default function NewOrder({ loader }) {
                           {item.name}
                         </div>
                       )}
-                    />
+                    /> */}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -260,18 +282,25 @@ export default function NewOrder({ loader }) {
                                 {index + 1}. {item.name}
                               </span>
                               <div className="flex items-center space-x-2">
-                                <label className="text-sm text-gray-600">Qty:</label>
+                                <label className="text-sm text-gray-600">
+                                  Qty:
+                                </label>
                                 <input
                                   type="number"
                                   value={item.qty}
-                                  onChange={(e) => updateItemQty(item.id, e.target.value)}
+                                  onChange={(e) =>
+                                    updateItemQty(item.id, e.target.value)
+                                  }
                                   min="1"
                                   className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 />
                               </div>
                             </div>
                             <div className="text-sm text-gray-600 mt-1">
-                              Pickup: {item.pickupLocation?.address}, {item.pickupLocation?.city}, {item.pickupLocation?.state} {item.pickupLocation?.zipcode}
+                              Pickup: {item.pickupLocation?.address},{" "}
+                              {item.pickupLocation?.city},{" "}
+                              {item.pickupLocation?.state}{" "}
+                              {item.pickupLocation?.zipcode}
                             </div>
                           </div>
                           <button
@@ -427,7 +456,8 @@ export default function NewOrder({ loader }) {
                   <div className="text-sm text-gray-600">
                     {selectedItems.length > 0 && (
                       <span>
-                        Total Items: {selectedItems.length} | Total Quantity: {selectedItems.reduce((sum, item) => sum + item.qty, 0)}
+                        Total Items: {selectedItems.length} | Total Quantity:{" "}
+                        {selectedItems.reduce((sum, item) => sum + item.qty, 0)}
                       </span>
                     )}
                   </div>
@@ -436,11 +466,13 @@ export default function NewOrder({ loader }) {
                     disabled={selectedItems.length === 0}
                     className={`font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors cursor-pointer ${
                       selectedItems.length === 0
-                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                        : 'bg-secondary hover:bg-secondary text-white focus:ring-secondary'
+                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                        : "bg-secondary hover:bg-secondary text-white focus:ring-secondary"
                     }`}
                   >
-                    Submit Order {selectedItems.length > 0 && `(${selectedItems.length} items)`}
+                    Submit Order{" "}
+                    {selectedItems.length > 0 &&
+                      `(${selectedItems.length} items)`}
                   </button>
                 </div>
               </div>

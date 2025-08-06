@@ -164,13 +164,13 @@ function RoutesSchedules({ loader }) {
           address: values.startAddress,
           city: values.startCity,
           state: values.startState,
-          zipCode: values.startZipcode,
+          zipcode: values.startZipcode,
         },
         endLocation: {
           address: values.endAddress,
           city: values.endCity,
           state: values.endState,
-          zipCode: values.endZipcode,
+          zipcode: values.endZipcode,
         },
         stops: values.stops
           .split(",")
@@ -529,8 +529,8 @@ function RoutesSchedules({ loader }) {
                         editingRoute?.startLocation?.state ||
                         "",
                       startZipcode:
-                        selectedRouteData?.startLocation?.zipCode ||
-                        editingRoute?.startLocation?.zipCode ||
+                        selectedRouteData?.startLocation?.zipcode ||
+                        editingRoute?.startLocation?.zipcode ||
                         "",
                       endAddress:
                         selectedRouteData?.endLocation?.address ||
@@ -545,8 +545,8 @@ function RoutesSchedules({ loader }) {
                         editingRoute?.endLocation?.state ||
                         "",
                       endZipcode:
-                        selectedRouteData?.endLocation?.zipCode ||
-                        editingRoute?.endLocation?.zipCode ||
+                        selectedRouteData?.endLocation?.zipcode ||
+                        editingRoute?.endLocation?.zipcode ||
                         "",
                       stops: selectedRouteData?.stops
                         ? selectedRouteData.stops.join(", ")
@@ -1029,7 +1029,7 @@ function RoutesSchedules({ loader }) {
                       Zipcode
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {selectedRowData?.startLocation?.zipCode || "N/A"}
+                      {selectedRowData?.startLocation?.zipcode || "N/A"}
                     </dd>
                   </div>
                   <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
@@ -1060,7 +1060,7 @@ function RoutesSchedules({ loader }) {
                       Zipcode
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {selectedRowData?.endLocation?.zipCode || "N/A"}
+                      {selectedRowData?.endLocation?.zipcode || "N/A"}
                     </dd>
                   </div>
                 </dl>

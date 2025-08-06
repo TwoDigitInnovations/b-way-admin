@@ -75,7 +75,7 @@ function Items({ loader, user }) {
       address: Yup.string().required("Pickup address is required"),
       city: Yup.string().required("Pickup city is required"),
       state: Yup.string().required("Pickup state is required"),
-      zipCode: Yup.string()
+      zipcode: Yup.string()
         .matches(/^\d{5}$/, "Zip code must be exactly 5 digits")
         .required("Zip code is required"),
     }),
@@ -100,7 +100,7 @@ function Items({ loader, user }) {
         address: values.pickupLocation.address,
         city: values.pickupLocation.city,
         state: values.pickupLocation.state,
-        zipCode: values.pickupLocation.zipCode,
+        zipcode: values.pickupLocation.zipcode,
       },
       status: values.status,
     };
@@ -512,7 +512,7 @@ function Items({ loader, user }) {
                   address: selectedItem?.pickupLocation?.address || "",
                   city: selectedItem?.pickupLocation?.city || "",
                   state: selectedItem?.pickupLocation?.state || "",
-                  zipCode: selectedItem?.pickupLocation?.zipCode || "",
+                  zipcode: selectedItem?.pickupLocation?.zipcode || "",
                 },
                 status: selectedItem?.status || (user?.role === "DISPATCHER" ? "Available" : ""),
               }}
@@ -745,15 +745,15 @@ function Items({ loader, user }) {
                           <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode</label>
                           <input
                             type="text"
-                            name="pickupLocation.zipCode"
-                            value={values.pickupLocation.zipCode}
+                            name="pickupLocation.zipcode"
+                            value={values.pickupLocation.zipcode}
                             onChange={handleChange}
                             placeholder="Zipcode"
                             maxLength={5}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                           />
                           <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.zipCode && touched.pickupLocation?.zipCode && errors.pickupLocation.zipCode}
+                            {errors.pickupLocation?.zipcode && touched.pickupLocation?.zipcode && errors.pickupLocation.zipcode}
                           </span>
                         </div>
                       </div>
@@ -872,7 +872,7 @@ function Items({ loader, user }) {
                       Pickup Zipcode
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {selectedItem?.pickupLocation?.zipCode || "N/A"}
+                      {selectedItem?.pickupLocation?.zipcode || "N/A"}
                     </dd>
                   </div>
                   <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">

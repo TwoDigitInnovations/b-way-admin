@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Clock, PlusIcon, Trash2Icon } from "lucide-react";
 import Layout from "@/components/layout";
 import { Formik } from "formik";
@@ -157,22 +157,20 @@ export default function NewOrder({ loader }) {
     setFilteredStates(filtered);
   };
 
+  const itemList = useMemo(
+    () =>
+      items.map((item) => ({
+        ...item,
+      })),
+    [items]
+  );
+
   const searchItems = (event) => {
-    const query = event.query?.toLowerCase() || "";
-    console.log("Search items called with query:", query);
-    
-    if (query === "" || !query) {
-      // When no query, show all items
-      setFilteredItems(items);
-    } else {
-      // Filter items based on query
-      const filtered = items.filter((item) => 
-        item.name.toLowerCase().includes(query)
-      );
-      setFilteredItems(filtered);
-    }
-    
-    console.log("Filtered items set:", filteredItems.length);
+    const query = event.query.toLowerCase();
+    const _filteredItems = itemList.filter((item) =>
+      item.name.toLowerCase().includes(query)
+    );
+    setFilteredItems(_filteredItems);
   };
 
   return (
@@ -203,22 +201,22 @@ export default function NewOrder({ loader }) {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Item(S)
                     </label>
-                    <Dropdown data={items} value={selectedCurrentItem} onChange={setSelectedCurrentItem} />
-                    {/* <AutoComplete
+                    {/* <Dropdown data={items} value={currentItemInput} selected={handleItemSelect} changed={handleItemChange} /> */}
+                    <AutoComplete
                       value={currentItemInput}
-                      suggestions={filteredItems?.length > 0 ? filteredItems : items}
+                      suggestions={filteredItems}
                       completeMethod={searchItems}
                       field="name"
-                      onDropdownClick={() => {
-                        console.log("Dropdown clicked, setting all items");
-                        setFilteredItems(items || []);
-                      }}
-                      onFocus={() => {
-                        console.log("AutoComplete focused, ensuring items are available");
-                        if (!filteredItems || filteredItems.length === 0) {
-                          setFilteredItems(items || []);
-                        }
-                      }}
+                      // onDropdownClick={() => {
+                      //   console.log("Dropdown clicked, setting all items");
+                      //   setFilteredItems(items || []);
+                      // }}
+                      // onFocus={() => {
+                      //   console.log("AutoComplete focused, ensuring items are available");
+                      //   if (!filteredItems || filteredItems.length === 0) {
+                      //     setFilteredItems(items || []);
+                      //   }
+                      // }}
                       onChange={(e) => {
                         setCurrentItemInput(e.value);
                       }}
@@ -232,12 +230,12 @@ export default function NewOrder({ loader }) {
                       inputClassName="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
                       className="w-full"
                       panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
-                      itemTemplate={(item) => (
-                        <div className="px-3 py-2 hover:bg-gray-100 text-sm">
-                          {item.name}
-                        </div>
-                      )}
-                    /> */}
+                      // itemTemplate={(item) => (
+                      //   <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                      //     {item.name}
+                      //   </div>
+                      // )}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -292,7 +290,7 @@ export default function NewOrder({ loader }) {
                                     updateItemQty(item.id, e.target.value)
                                   }
                                   min="1"
-                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-black focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 />
                               </div>
                             </div>

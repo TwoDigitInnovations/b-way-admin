@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { AutoComplete } from "primereact/autocomplete";
 
-export default function Dropdown({ data, value, onChange }) {
+export default function Dropdown({ data, value, selected, changed }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [filteredItems, setFilteredItems] = useState([]);
 
@@ -25,15 +25,17 @@ export default function Dropdown({ data, value, onChange }) {
 
   return (
     <AutoComplete
-      value={value || selectedItem}
+      value={value}
       suggestions={filteredItems}
       completeMethod={searchItems}
     //   virtualScrollerOptions={{ itemSize: 38 }}
       field="label"
       dropdown
       onChange={(e) => {
-        setSelectedItem(e.value);
-        onChange(e.value);
+        changed(e.value);
+      }}
+      onSelect={(e) => {
+        selected(e.value);
       }}
       placeholder="Select or type item"
       inputClassName="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"

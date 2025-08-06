@@ -654,7 +654,7 @@ const { items } = useSelector((state) => state.item);
             <Formik
               key={selectedOrder?._id || "new"} // Force reinitialize when order changes
               initialValues={{
-                items: selectedOrder?.items || "",
+                items: selectedOrder?.items?._id || selectedOrder?.items || "",
                 qty: selectedOrder?.qty || "",
                 pickupLocation: {
                   address: selectedOrder?.pickupLocation?.address || "",
@@ -693,7 +693,7 @@ const { items } = useSelector((state) => state.item);
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Item(S)</label>
                         <AutoComplete
-                         value={filteredItems.find((item) => item._id === values.items) || null}
+                        value={items.find((item) => item._id === values.items)?.name || ""}
                           suggestions={filteredItems}
                           completeMethod={searchItems}
                           field="name"

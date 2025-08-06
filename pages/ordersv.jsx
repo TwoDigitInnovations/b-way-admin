@@ -27,6 +27,7 @@ import toast from "react-hot-toast";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
+import { fetchItems } from "@/store/itemSlice";
 import { fetchDrivers } from "@/store/driverSlice";
 import { fetchRoutes } from "@/store/routeSlice";
 import items from "../utils/items.json";
@@ -54,6 +55,10 @@ function Orders({ loader, user }) {
   const { routes, assignedRoute, loading, error } = useSelector(
     (state) => state.route
   );
+//   const { routes, assignedRoute, loading, error } = useSelector(
+//   (state) => state.route
+// );
+const { items } = useSelector((state) => state.item);
 
   const statesAndCities = getStateAndCityPicklist();
   const allCities = Object.values(statesAndCities).flat();
@@ -66,8 +71,18 @@ function Orders({ loader, user }) {
 
   useEffect(() => {
     dispatch(fetchRoutes({ page: 0, limit: 0 }));
+     dispatch(fetchItems());
+      setFilteredPickupCities(allCities);
+  setFilteredPickupStates(allStates);
+  setFilteredDeliveryCities(allCities);
+  setFilteredDeliveryStates(allStates);
     console.log("Routes fetched");
   }, [dispatch]);
+  useEffect(() => {
+  if (items && items.length > 0) {
+    setFilteredItems(items);
+  }
+}, [items]);
 
   // Add useEffect to log routes when they change
   useEffect(() => {
@@ -442,17 +457,17 @@ function Orders({ loader, user }) {
     setFilteredDeliveryStates(filtered);
   };
   // Autocomplete search for items
-  const searchItems = (event) => {
-    let filtered = [];
-    if (!event.query || event.query.length === 0) {
-      filtered = items.items || [];
-    } else {
-      filtered = (items.items || []).filter((item) =>
-        item.name.toLowerCase().includes(event.query.toLowerCase())
-      );
-    }
-    setFilteredItems(filtered);
-  };
+ const searchItems = (event) => {
+  let filtered = [];
+  if (!event.query || event.query.length === 0) {
+    filtered = items || []; 
+  } else {
+    filtered = (items || []).filter((item) =>
+      item.name.toLowerCase().includes(event.query.toLowerCase())
+    );
+  }
+  setFilteredItems(filtered);
+};
 
   return (
     <Layout title="Orders">
@@ -678,7 +693,7 @@ function Orders({ loader, user }) {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Item(S)</label>
                         <AutoComplete
-                          value={filteredItems.find((item) => item._id === values.items) || null}
+                         value={filteredItems.find((item) => item._id === values.items) || null}
                           suggestions={filteredItems}
                           completeMethod={searchItems}
                           field="name"

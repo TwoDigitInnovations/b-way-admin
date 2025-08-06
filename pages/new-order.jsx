@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Clock, PlusIcon } from "lucide-react";
+import { Clock, PlusIcon, Trash2Icon } from "lucide-react";
 import Layout from "@/components/layout";
 import { Formik } from "formik";
 import * as Yup from "yup";
@@ -12,7 +12,9 @@ import { getStateAndCityPicklist, getStateByCity } from "@/utils/states";
 import { AutoComplete } from "primereact/autocomplete";
 
 export default function NewOrder({ loader }) {
-  const [selectedItemLocation, setSelectedItemLocation] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [currentItemInput, setCurrentItemInput] = useState("");
+  const [currentQty, setCurrentQty] = useState("");
   const dispatch = useDispatch();
   const router = useRouter();
   const { items } = useSelector((state) => state.item);
@@ -21,11 +23,8 @@ export default function NewOrder({ loader }) {
   const allStates = Object.keys(statesAndCities);
   const [filteredCities, setFilteredCities] = useState([]);
   const [filteredStates, setFilteredStates] = useState([]);
-  // const [selectedCity, setSelectedCity] = useState("");
-  // const [selectedState, setSelectedState] = useState("");
-  // const [detectedState, setDetectedState] = useState("");
   const [filteredItems, setFilteredItems] = useState([]);
-  const [itemInput, setItemInput] = useState("");
+  const [selectedCurrentItem, setSelectedCurrentItem] = useState(null);
 
   useEffect(() => {
     dispatch(fetchItems());
@@ -34,56 +33,74 @@ export default function NewOrder({ loader }) {
     setFilteredStates(allStates);
   }, [dispatch]);
 
+  useEffect(() => {
+  if (items) {
+    setFilteredItems(items);
+  }
+}, [items]);
+
   const validationSchema = Yup.object({
-    items: Yup.string().required("Item(s) is required"),
-    qty: Yup.number()
-      .required("Quantity is required")
-      .min(1, "Must be at least 1"),
-    // pickupLocation: Yup.object({
-    //   address: Yup.string().required("Pickup address is required"),
-    //   city: Yup.string().required("Pickup city is required"),
-    //   state: Yup.string().required("Pickup state is required"),
-    //   zipcode: Yup.string()
-    //   .matches(/^\d{5}$/, "Pickup zipcode must be exactly 5 digits")
-    //   .required("Pickup zipcode is required"),
-    // }),
-    // deliveryLocation: Yup.object({
-    //   address: Yup.string().required("Delivery address is required"),
-    //   city: Yup.string().required("Delivery city is required"),
-    //   state: Yup.string().required("Delivery state is required"),
-    //   zipcode: Yup.string()
-    //     .matches(/^\d{5}$/, "Delivery zipcode must be exactly 5 digits")
-    //     .required("Delivery zipcode is required"),
-    // }),
+    // Validation will be handled for the selectedItems array
   });
 
   const initialValues = {
-    items: "",
-    qty: "",
-    // deliveryLocation: {
-    //   address: "",
-    //   city: "",
-    //   state: "",
-    //   zipcode: "",
-    // },
+    // Form values are now managed by selectedItems state
+  };
+
+  // Helper functions for managing multiple items
+  const addItem = () => {
+    if (!selectedCurrentItem || !currentQty || parseInt(currentQty) < 1) {
+      toast.error("Please select an item and enter a valid quantity");
+      return;
+    }
+
+    const newItem = {
+      id: Date.now(), // Unique ID for React key
+      itemId: selectedCurrentItem._id,
+      name: selectedCurrentItem.name,
+      qty: parseInt(currentQty),
+      pickupLocation: selectedCurrentItem.pickupLocation
+    };
+
+    setSelectedItems([...selectedItems, newItem]);
+    setCurrentItemInput("");
+    setCurrentQty("");
+    setSelectedCurrentItem(null);
+    setFilteredItems(items);
+    toast.success("Item added successfully");
+  };
+
+  const removeItem = (itemId) => {
+    setSelectedItems(selectedItems.filter(item => item.id !== itemId));
+    toast.success("Item removed successfully");
+  };
+
+  const updateItemQty = (itemId, newQty) => {
+    if (newQty < 1) return;
+    setSelectedItems(selectedItems.map(item => 
+      item.id === itemId ? { ...item, qty: parseInt(newQty) } : item
+    ));
   };
 
   const handleSubmit = (values, { resetForm }) => {
-    console.log("Form submitted with values:", values);
+    if (selectedItems.length === 0) {
+      toast.error("Please add at least one item to the order");
+      return;
+    }
+
+    console.log("Form submitted with items:", selectedItems);
     loader(true);
 
     // Transform the data to match backend expectations
     const orderData = {
-      items: values.items,
-      qty: values.qty,
-      pickupLocation: selectedItemLocation.address,
-      pickupCity: selectedItemLocation.city,
-      pickupState: selectedItemLocation.state,
-      pickupZipcode: selectedItemLocation.zipcode,
-      // deliveryLocation: values.deliveryLocation.address,
-      // deliveryCity: values.deliveryLocation.city,
-      // deliveryState: values.deliveryLocation.state,
-      // deliveryZipcode: values.deliveryLocation.zipcode,
+      items: selectedItems.map(item => ({
+        itemId: item.itemId,
+        qty: item.qty,
+        pickupLocation: item.pickupLocation.address,
+        pickupCity: item.pickupLocation.city,
+        pickupState: item.pickupLocation.state,
+        pickupZipcode: item.pickupLocation.zipcode,
+      }))
     };
 
     Api("POST", "/order/create", orderData, router)
@@ -92,8 +109,10 @@ export default function NewOrder({ loader }) {
         if (response?.status) {
           toast.success("Order created successfully!");
           resetForm();
-          setSelectedItemLocation(null);
-          setItemInput(""); // Reset input
+          setSelectedItems([]);
+          setCurrentItemInput("");
+          setCurrentQty("");
+          setSelectedCurrentItem(null);
           //   router.push("/ordersv");
         } else {
           toast.error("Failed to create order. Please try again.");
@@ -135,16 +154,15 @@ export default function NewOrder({ loader }) {
   };
 
   const searchItems = (event) => {
-    let filtered = [];
-    if (!event.query || event.query.length === 0) {
-      filtered = items;
-    } else {
-      filtered = items.filter((item) =>
-        item.name.toLowerCase().includes(event.query.toLowerCase())
-      );
-    }
+  if (!event.query || event.query.length === 0) {
+    setFilteredItems(items);
+  } else {
+    const filtered = items.filter((item) =>
+      item.name.toLowerCase().includes(event.query.toLowerCase())
+    );
     setFilteredItems(filtered);
-  };
+  }
+};
 
   return (
     <Layout title={"Create New Order"}>
@@ -169,31 +187,23 @@ export default function NewOrder({ loader }) {
               </h2>
               <div className="p-4 sm:p-6">
                 {/* Item(S) and Qty Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-center">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Item(S)
                     </label>
                     <AutoComplete
-                      value={itemInput}
+                      value={currentItemInput}
                       suggestions={filteredItems}
                       completeMethod={searchItems}
                       field="name"
                       onChange={(e) => {
-                        setItemInput(e.value);
+                        setCurrentItemInput(e.value);
                       }}
                       onSelect={(e) => {
                         const selectedItem = e.value;
-                        setItemInput(selectedItem.name);
-                        handleChange({
-                          target: {
-                            name: "items",
-                            value: selectedItem?._id || "",
-                          },
-                        });
-                        setSelectedItemLocation(
-                          selectedItem ? selectedItem.pickupLocation : null
-                        );
+                        setCurrentItemInput(selectedItem.name);
+                        setSelectedCurrentItem(selectedItem);
                       }}
                       dropdown
                       placeholder="Select or type item"
@@ -206,9 +216,6 @@ export default function NewOrder({ loader }) {
                         </div>
                       )}
                     />
-                    <span className="text-sm text-red-600">
-                      {errors.items && touched.items && errors.items}
-                    </span>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -216,25 +223,70 @@ export default function NewOrder({ loader }) {
                     </label>
                     <input
                       type="number"
-                      name="qty"
-                      value={values.qty}
-                      onChange={handleChange}
+                      value={currentQty}
+                      onChange={(e) => setCurrentQty(e.target.value)}
                       placeholder="Qty"
+                      min="1"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                     />
-                    <span className="text-sm text-red-600">
-                      {errors.qty && touched.qty && errors.qty}
-                    </span>
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={addItem}
+                      className="bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors cursor-pointer h-10"
+                    >
+                      <PlusIcon className="h-5 w-5 inline-block mr-2" />
+                      Add Item
+                    </button>
                   </div>
                 </div>
 
-                {/* <button
-                  type="button"
-                  className="mb-6 bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors cursor-pointer h-10"
-                >
-                  <PlusIcon className="h-5 w-5 inline-block mr-2" />
-                  Add Item
-                </button> */}
+                {/* Selected Items List */}
+                {selectedItems.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-md font-semibold text-gray-800 mb-3">
+                      Selected Items ({selectedItems.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {selectedItems.map((item, index) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-4">
+                              <span className="font-medium text-gray-800">
+                                {index + 1}. {item.name}
+                              </span>
+                              <div className="flex items-center space-x-2">
+                                <label className="text-sm text-gray-600">Qty:</label>
+                                <input
+                                  type="number"
+                                  value={item.qty}
+                                  onChange={(e) => updateItemQty(item.id, e.target.value)}
+                                  min="1"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                              </div>
+                            </div>
+                            <div className="text-sm text-gray-600 mt-1">
+                              Pickup: {item.pickupLocation?.address}, {item.pickupLocation?.city}, {item.pickupLocation?.state} {item.pickupLocation?.zipcode}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeItem(item.id)}
+                            className="ml-4 text-red-500 hover:text-red-700 p-1"
+                            title="Remove item"
+                          >
+                            <Trash2Icon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Delivery Location Section */}
                 {/* <div className="mb-6">
@@ -371,12 +423,24 @@ export default function NewOrder({ loader }) {
                 </div> */}
 
                 {/* Submit Button */}
-                <div className="flex justify-start">
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-600">
+                    {selectedItems.length > 0 && (
+                      <span>
+                        Total Items: {selectedItems.length} | Total Quantity: {selectedItems.reduce((sum, item) => sum + item.qty, 0)}
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="submit"
-                    className="bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors cursor-pointer"
+                    disabled={selectedItems.length === 0}
+                    className={`font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors cursor-pointer ${
+                      selectedItems.length === 0
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : 'bg-secondary hover:bg-secondary text-white focus:ring-secondary'
+                    }`}
                   >
-                    Submit
+                    Submit Order {selectedItems.length > 0 && `(${selectedItems.length} items)`}
                   </button>
                 </div>
               </div>

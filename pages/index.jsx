@@ -47,8 +47,8 @@ export default function BWayLoginPage({ loader }) {
           Cookies.set("token", res.data.token);
           localStorage.setItem("userDetail", JSON.stringify(res.data.user));
           setUser(res.data.user); // Update user context
-          // router.push(res.data.user?.role === "ADMIN" ? "/dashboardv" : "/dashboard");
-          router.push("/dashboardv")
+          // router.push(res.data.user?.role === "ADMIN" ? "/dashboard" : "/dashboard");
+          router.push("/dashboard")
           toast.success("Login successful!");
           console.log("Login successful:", res);
         }

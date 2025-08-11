@@ -6,6 +6,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { PrimeReactProvider } from "primereact/api";
 import "@/styles/globals.css";
 import "primereact/resources/themes/lara-light-cyan/theme.css";
+import "leaflet/dist/leaflet.css";
 import { Provider } from "react-redux";
 import { store } from "@/store";
 
@@ -24,7 +25,7 @@ function App({ Component, pageProps }) {
       router.replace("/");
     }
     getUserdetail();
-  }, []);
+  }, [router]);
 
   const getUserdetail = () => {
     const user = localStorage.getItem("userDetail");

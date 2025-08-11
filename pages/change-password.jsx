@@ -46,7 +46,7 @@ function ChangePassword({ loader }) {
       .then((res) => {
         if (res?.status) {
           toast.success("Password changed successfully!");
-          router.push("/dashboardv");
+          router.push("/dashboard");
         }
       })
       .catch((err) => {

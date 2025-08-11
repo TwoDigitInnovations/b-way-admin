@@ -14,6 +14,7 @@ import {
   Delete,
   DeleteIcon,
   Trash,
+  Map,
 } from "lucide-react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -21,6 +22,7 @@ import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
 import isAuth from "@/components/isAuth";
+import RouteMapViewer from "@/components/RouteMapViewer";
 import { useDispatch, useSelector } from "react-redux";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
@@ -93,6 +95,7 @@ function RoutesSchedules({ loader }) {
   const [editingRoute, setEditingRoute] = useState(null);
   const [selectedRouteData, setSelectedRouteData] = useState(null);
   const [viewModal, setViewModal] = useState(false);
+  const [mapModal, setMapModal] = useState(false);
   const menuRef = useRef(null);
   const [selectedRowData, setSelectedRowData] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -130,10 +133,10 @@ function RoutesSchedules({ loader }) {
 
   const fetchRouteDetails = (id) => {
     loader(true);
-    Api("GET", `/route/${id}`)
+    Api("GET", `/route/map/${id}`)
       .then((res) => {
         if (res?.status) {
-          setSelectedRouteData(res.data);
+          setSelectedRouteData(res.route);
         }
       })
       .catch((err) => {
@@ -174,27 +177,39 @@ function RoutesSchedules({ loader }) {
         },
         stops: values.stops
           .split(",")
-          .map((stop) => stop.trim())
-          .filter((stop) => stop),
+          .map((stop) => ({ name: stop.trim(), address: stop.trim() }))
+          .filter((stop) => stop.name),
         assignedDriver: values.assignedDriver,
         eta: values.eta,
-        activeDays: Array.isArray(values.activeDays) 
-          ? values.activeDays 
-          : values.activeDays.split(",").map((day) => day.trim()).filter((day) => day),
-        status: values.status,
+        activeDays: Array.isArray(values.activeDays)
+          ? values.activeDays
+          : values.activeDays
+              .split(",")
+              .map((day) => day.trim())
+              .filter((day) => day),
       };
 
       const method = editingRoute ? "PUT" : "POST";
-      const url = editingRoute ? `/route/${editingRoute._id}` : "/route/create";
+      const url = editingRoute
+        ? `/route/${editingRoute._id}`
+        : "/route/create";
 
       const response = await Api(method, url, transformedData);
 
       if (response?.status || response?.success) {
-        toast.success(
-          editingRoute
-            ? "Route updated successfully!"
-            : "Route created successfully!"
-        );
+        const message = editingRoute
+          ? "Route updated successfully!"
+          : "Route created successfully!";
+
+        // Show additional details if route was created with AWS
+        if (response?.routeDetails && !editingRoute) {
+          toast.success(
+            `${message} Distance: ${response.routeDetails.distance}, Duration: ${response.routeDetails.duration}`
+          );
+        } else {
+          toast.success(message);
+        }
+
         resetForm();
         closeModal();
         dispatch(fetchRoutes({ page: currentPage, limit }));
@@ -203,7 +218,19 @@ function RoutesSchedules({ loader }) {
       }
     } catch (err) {
       console.error("Form submission error:", err);
-      toast.error(err?.message || "Failed to save route. Please try again.");
+
+      // Show more specific error messages
+      if (err?.message?.includes("coordinates")) {
+        toast.error(
+          "Failed to find coordinates for the provided addresses. Please check the addresses and try again."
+        );
+      } else if (err?.message?.includes("AWS")) {
+        toast.error(
+          "Route created with basic data. AWS mapping service is not configured."
+        );
+      } else {
+        toast.error(err?.message || "Failed to save route. Please try again.");
+      }
     } finally {
       setSubmitting(false);
       loader(false);
@@ -269,11 +296,21 @@ function RoutesSchedules({ loader }) {
 
   const getMenuItems = (row) => [
     {
-      label: "View",
+      label: "View Details",
       icon: <Eye className="w-5 h-5 text-gray-500" />,
       command: () => {
         console.log("View clicked", row);
         setViewModal(true);
+        fetchRouteDetails(row._id);
+      },
+    },
+    {
+      label: "View Map",
+      icon: <Map className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("Map clicked", row);
+        setMapModal(true);
+        setSelectedRowData(row);
         fetchRouteDetails(row._id);
       },
     },
@@ -306,51 +343,35 @@ function RoutesSchedules({ loader }) {
 
   // Autocomplete search for start city
   const searchStartCities = (event) => {
-    let filtered = [];
-    if (!event.query || event.query.length === 0) {
-      filtered = allCities;
-    } else {
-      filtered = allCities.filter((city) =>
-        city.toLowerCase().includes(event.query.toLowerCase())
-      );
-    }
-    setFilteredStartCities(filtered);
+    const query = event.query.toLowerCase();
+    const _filteredCities = allCities.filter((city) =>
+      city.toLowerCase().includes(query)
+    );
+    setFilteredStartCities(_filteredCities);
   };
   // Autocomplete search for start state
   const searchStartStates = (event) => {
-    let filtered = [];
-    if (!event.query || event.query.length === 0) {
-      filtered = allStates;
-    } else {
-      filtered = allStates.filter((state) =>
-        state.toLowerCase().includes(event.query.toLowerCase())
-      );
-    }
-    setFilteredStartStates(filtered);
+    const query = event.query.toLowerCase();
+    const _filteredStates = allStates.filter((state) =>
+      state.toLowerCase().includes(query)
+    );
+    setFilteredStartStates(_filteredStates);
   };
   // Autocomplete search for end city
   const searchEndCities = (event) => {
-    let filtered = [];
-    if (!event.query || event.query.length === 0) {
-      filtered = allCities;
-    } else {
-      filtered = allCities.filter((city) =>
-        city.toLowerCase().includes(event.query.toLowerCase())
-      );
-    }
-    setFilteredEndCities(filtered);
+    const query = event.query.toLowerCase();
+    const _filteredCities = allCities.filter((city) =>
+      city.toLowerCase().includes(query)
+    );
+    setFilteredEndCities(_filteredCities);
   };
   // Autocomplete search for end state
   const searchEndStates = (event) => {
-    let filtered = [];
-    if (!event.query || event.query.length === 0) {
-      filtered = allStates;
-    } else {
-      filtered = allStates.filter((state) =>
-        state.toLowerCase().includes(event.query.toLowerCase())
-      );
-    }
-    setFilteredEndStates(filtered);
+    const query = event.query.toLowerCase();
+    const _filteredStates = allStates.filter((state) =>
+      state.toLowerCase().includes(query)
+    );
+    setFilteredEndStates(_filteredStates);
   };
 
   return (
@@ -370,7 +391,6 @@ function RoutesSchedules({ loader }) {
           </button>
         </div>
 
-        {/* Table with Horizontal Scroll for All Screen Sizes */}
         <DataTable
           value={routes}
           stripedRows
@@ -418,9 +438,25 @@ function RoutesSchedules({ loader }) {
             field="stops"
             header="Stops"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-            body={(rowData) => (
-              <span>{rowData.stops ? rowData.stops.join(", ") : "N/A"}</span>
-            )}
+            body={(rowData) => {
+              const stopsArr = Array.isArray(rowData.stops)
+                ? rowData.stops.map((stop) => stop.name)
+                : [];
+              const maxVisible = 3;
+              if (stopsArr.length === 0) return <span>N/A</span>;
+              const visibleStops = stopsArr.slice(0, maxVisible).join(", ");
+              const moreCount = stopsArr.length - maxVisible;
+              return (
+                <span>
+                  {visibleStops || "No Stops"}
+                  {moreCount > 0 && (
+                    <span className="text-gray-500 ml-1">
+                      +{moreCount} more
+                    </span>
+                  )}
+                </span>
+              );
+            }}
           />
           <Column
             field="assignedDriver"
@@ -463,7 +499,21 @@ function RoutesSchedules({ loader }) {
               position: "relative",
             }}
             body={(rowData, options) => (
-              <div className="relative flex justify-center">
+              <div className="relative flex justify-center space-x-1">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setMapModal(true);
+                    setSelectedRowData(rowData);
+                    fetchRouteDetails(rowData._id);
+                  }}
+                  className="p-1 rounded hover:bg-blue-100 focus:outline-none"
+                  title="View Route Map"
+                >
+                  <Map className="w-4 h-4 text-gray-500" />
+                </button>
                 <button
                   type="button"
                   onClick={(event) => {
@@ -560,7 +610,8 @@ function RoutesSchedules({ loader }) {
                         editingRoute?.assignedDriver ||
                         "",
                       eta: selectedRouteData?.eta || editingRoute?.eta || "",
-                      activeDays: selectedRouteData?.activeDays ||
+                      activeDays:
+                        selectedRouteData?.activeDays ||
                         editingRoute?.activeDays ||
                         [],
                       status:
@@ -603,12 +654,18 @@ function RoutesSchedules({ loader }) {
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Address *
+                        </label>
                         <Field
                           type="text"
                           name="startAddress"
                           placeholder="Address *"
-                          className="w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 mt-[22px]"
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.startAddress && errors.startAddress
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
                         />
                         <ErrorMessage
                           name="startAddress"
@@ -616,8 +673,10 @@ function RoutesSchedules({ loader }) {
                           className="text-red-500 text-xs mt-1"
                         />
                       </div>
-                      <div className="flex flex-col">
-                        <label className="block text-sm font-medium text-gray-700 mb-7">City *</label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          City *
+                        </label>
                         <AutoComplete
                           value={values.startCity}
                           suggestions={filteredStartCities}
@@ -629,13 +688,21 @@ function RoutesSchedules({ loader }) {
                           className="w-full max-w-[220px]"
                           panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                           itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                              {item}
+                            </div>
                           )}
                         />
-                        <ErrorMessage name="startCity" component="div" className="text-red-500 text-xs mt-1" />
+                        <ErrorMessage
+                          name="startCity"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
                       </div>
-                      <div className="flex flex-col">
-                        <label className="block text-sm font-medium text-gray-700 mb-7">State *</label>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          State *
+                        </label>
                         <AutoComplete
                           value={values.startState}
                           suggestions={filteredStartStates}
@@ -647,19 +714,31 @@ function RoutesSchedules({ loader }) {
                           className="w-full max-w-[220px]"
                           panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                           itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                              {item}
+                            </div>
                           )}
                         />
-                        <ErrorMessage name="startState" component="div" className="text-red-500 text-xs mt-1" />
+                        <ErrorMessage
+                          name="startState"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Zipcode *
+                        </label>
                         <Field
                           type="text"
                           name="startZipcode"
                           placeholder="Zipcode *"
                           maxLength={5}
-                          className="w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 mt-[22px]"
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.startZipcode && errors.startZipcode
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
                         />
                         <ErrorMessage
                           name="startZipcode"
@@ -677,12 +756,18 @@ function RoutesSchedules({ loader }) {
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Address *
+                        </label>
                         <Field
                           type="text"
                           name="endAddress"
                           placeholder="Address *"
-                          className="w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 "
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.endAddress && errors.endAddress
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
                         />
                         <ErrorMessage
                           name="endAddress"
@@ -691,7 +776,9 @@ function RoutesSchedules({ loader }) {
                         />
                       </div>
                       <div className="flex flex-col">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          City *
+                        </label>
                         <AutoComplete
                           value={values.endCity}
                           suggestions={filteredEndCities}
@@ -703,13 +790,21 @@ function RoutesSchedules({ loader }) {
                           className="w-full max-w-[220px]"
                           panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                           itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                              {item}
+                            </div>
                           )}
                         />
-                        <ErrorMessage name="endCity" component="div" className="text-red-500 text-xs mt-1" />
+                        <ErrorMessage
+                          name="endCity"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
                       </div>
                       <div className="flex flex-col">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">State *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          State *
+                        </label>
                         <AutoComplete
                           value={values.endState}
                           suggestions={filteredEndStates}
@@ -721,19 +816,31 @@ function RoutesSchedules({ loader }) {
                           className="w-full max-w-[220px]"
                           panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                           itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                              {item}
+                            </div>
                           )}
                         />
-                        <ErrorMessage name="endState" component="div" className="text-red-500 text-xs mt-1" />
+                        <ErrorMessage
+                          name="endState"
+                          component="div"
+                          className="text-red-500 text-xs mt-1"
+                        />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Zipcode *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Zipcode *
+                        </label>
                         <Field
                           type="text"
                           name="endZipcode"
                           placeholder="Zipcode *"
                           maxLength={5}
-                          className="w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 "
+                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                            touched.endZipcode && errors.endZipcode
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          }`}
                         />
                         <ErrorMessage
                           name="endZipcode"
@@ -784,6 +891,12 @@ function RoutesSchedules({ loader }) {
                           selected={values.stops === "Oxford Hospital"}
                         >
                           Oxford Hospital
+                        </option> 
+                        <option
+                          value="CVS Pharmacy"
+                          selected={values.stops === "CVS Pharmacy"}
+                        >
+                          CVS Pharmacy
                         </option>
                         <option
                           value="Jim Pharmacy"
@@ -965,8 +1078,9 @@ function RoutesSchedules({ loader }) {
                       Assigned Driver
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                      {selectedRowData?.assignedDriver?.name || 
-                       selectedRowData?.assignedDriver?.driver?.name || "N/A"}
+                      {selectedRowData?.assignedDriver?.name ||
+                        selectedRowData?.assignedDriver?.driver?.name ||
+                        "N/A"}
                     </dd>
                   </div>
                   <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
@@ -1067,6 +1181,88 @@ function RoutesSchedules({ loader }) {
               </div>
 
               {/* Additional details can be added here */}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Map Modal */}
+      {mapModal && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center space-x-2">
+                <Map className="w-5 h-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Route Map -{" "}
+                  {selectedRouteData?.routeName || selectedRowData?.routeName}
+                </h2>
+              </div>
+              <button
+                onClick={() => {
+                  setMapModal(false);
+                  setSelectedRowData(null);
+                  setSelectedRouteData(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4">
+              {selectedRouteData ? (
+                <RouteMapViewer
+                  routeData={selectedRouteData}
+                  height="500px"
+                  showControls={true}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-96">
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="text-gray-600">Loading route data...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="px-4 pb-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h4 className="font-medium text-gray-700 mb-2">
+                  Route Information
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Driver:</span>
+                    <p className="font-medium">
+                      {selectedRouteData?.assignedDriver?.driver?.name ||
+                        selectedRowData?.assignedDriver?.driver?.name ||
+                        "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Status:</span>
+                    <p className="font-medium">
+                      {selectedRouteData?.status || selectedRowData?.status}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">ETA:</span>
+                    <p className="font-medium">
+                      {selectedRouteData?.eta || selectedRowData?.eta}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Active Days:</span>
+                    <p className="font-medium">
+                      {(
+                        selectedRouteData?.activeDays ||
+                        selectedRowData?.activeDays ||
+                        []
+                      ).join(", ") || "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -23,33 +23,33 @@ const Sidebar = () => {
     {
       icon: LayoutDashboard,
       label: "Dashboard",
-      // href: user?.role === "ADMIN" ? "/dashboardv" : "/dashboard",
-      href: "/dashboardv",
-      role: ["ADMIN", "USER", "DRIVER", "DISPATCHER"],
+      // href: user?.role === "ADMIN" ? "/dashboard" : "/dashboard",
+      href: "/dashboard",
+      role: ["ADMIN", "CLIENT", "DRIVER", "DISPATCHER", "HOSPITAL"],
     },
     {
       icon: "/images/s1.png",
       label: "Items",
       href: "/items",
-      role: ["ADMIN", "DISPATCHER"],
+      role: ["ADMIN", "DISPATCHER", "CLIENT"],
     },
     {
       icon: "/images/s1.png",
       label: "Orders",
       href: "/ordersv",
-      role: ["ADMIN", "DISPATCHER", "USER"],
+      role: ["ADMIN", "DISPATCHER", "CLIENT", "HOSPITAL"],
     },
     {
       icon: "/images/s1.png",
       label: "New Delivery Request",
       href: "/new-order",
-      role: ["USER"],
+      role: ["HOSPITAL"],
     },
     {
       icon: "/images/s2.png",
       label: "Routes & Schedules",
       href: "/allroutes",
-      role: ["ADMIN"],
+      role: ["ADMIN", "HOSPITAL"],
     },
     {
       icon: "/images/s3.png",
@@ -85,25 +85,25 @@ const Sidebar = () => {
       icon: "/images/s8.png",
       label: "Billing & Invoices",
       href: "/billing-and-invoice",
-      role: ["USER"],
+      role: ["CLIENT"],
     },
     {
       icon: "/images/notifications.svg",
       label: "Notification & Alert",
       href: "/alerts",
-      role: ["USER"],
+      role: ["CLIENT"],
     },
     {
       icon: "/images/manage_accounts.svg",
       label: "Account Information",
       href: "/account-info",
-      role: ["USER"],
+      role: ["HOSPITAL"],
     },
     {
       icon: "/images/headset_mic.svg",
       label: "Support & Help Center",
       href: "/support",
-      role: ["USER"],
+      role: ["HOSPITAL"],
     },
     {
       icon: "/images/s6.png",
@@ -133,7 +133,7 @@ const Sidebar = () => {
           {menuItems.map((item, index) => {
             const Icon = item.icon;
             const isActive = item.href && router.pathname === item.href;
-            const userRole = user?.role || "USER";
+            const userRole = user?.role || "CLIENT";
             const isVisible = item.role.includes(userRole);
             if (!isVisible) return null;
             return (

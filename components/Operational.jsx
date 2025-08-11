@@ -27,7 +27,7 @@ export default function Operational({
   const [showOrderModal, setShowOrderModal] = useState(false);
   const router = useRouter();
 
-    const getStatusStyle = (status) => {
+  const getStatusStyle = (status) => {
     const statusStyles = {
       Active: "bg-green-100 text-green-800 border border-green-200",
       Inactive: "bg-red-100 text-red-800 border border-red-200",
@@ -82,7 +82,9 @@ export default function Operational({
                       {card.value}
                     </p>
                     <div className="flex items-center text-xs">
-                      <TrendingUp className="w-3 h-3 text-green-500 mr-1" />
+                      {card.trend === "up" ? (
+                        <TrendingUp className="w-3 h-3 text-green-500 mr-1" />
+                      ) : null}
                       <span className="text-green-600 font-medium">
                         {card.change}
                       </span>
@@ -266,126 +268,315 @@ export default function Operational({
           )}
 
           {/* Recent Orders Table */}
-          <div className={`col-span-${user?.role === "ADMIN" ? "4" : "5"}`}>
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-base lg:text-lg font-semibold text-gray-900">
-                  Recent Orders
-                </h3>
-                <button className="text-[#003C72] hover:text-[#003C72] font-medium text-sm lg:text-base"
-                  onClick={() => router.push('/ordersv')}
-                >
-                  View All
-                </button>
-              </div>
-
-              <div className="overflow-hidden">
-                {loading ? (
-                  <div className="p-8 text-center">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#003C72]"></div>
-                    <p className="mt-2 text-gray-600">Loading recent orders...</p>
-                  </div>
-                ) : orders && orders.length > 0 ? (
-                  <DataTable
-                    value={orders}
-                    stripedRows
-                    tableStyle={{ minWidth: "50rem" }}
-                    rowClassName={() => "hover:bg-gray-50"}
-                    size="small"
-                    // style={{ overflow: "visible" }}
-                    // scrollable={false}
-                    // columnResizeMode="expand"
-                    // resizableColumns
-                    // paginator
-                    // rows={10}
-                    // rowsPerPageOptions={[5, 10, 25, 50]}
+          {user.role === "CLIENT" ? (
+            <div className={`col-span-${user?.role === "ADMIN" ? "4" : "5"}`}>
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <h3 className="text-base lg:text-lg font-semibold text-gray-900">
+                    Recent Orders
+                  </h3>
+                  <button
+                    className="text-[#003C72] hover:text-[#003C72] font-medium text-sm lg:text-base"
+                    onClick={() => router.push("/ordersv")}
                   >
-                  <Column
-                    field="no"
-                    header="No."
-                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-                    body={(rowData, options) => (
-                      <span className="text-gray-600">
-                        {options.rowIndex + 1}
-                      </span>
-                    )}
-                  />
-                  <Column
-                    field="facilityName"
-                    header="Facility Name"
-                    bodyStyle={{
-                      verticalAlign: "middle",
-                      fontSize: "14px",
-                    }}
-                  />
-                  <Column
-                    field="orderId"
-                    header="Order ID"
-                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-                  />
-                  <Column
-                    field="items"
-                    header="Item(s)"
-                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-                  />
-                  <Column
-                    field="qty"
-                    header="Qty"
-                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-                  />
-                  <Column
-                    field="status"
-                    header="Status"
-                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-                    body={(rowData) => getStatusStyle(rowData.status)}
-                  />
-                  <Column
-                    field="assignedDriver"
-                    header="Driver"
-                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-                  />
-                  <Column
-                    field="route"
-                    header="Route"
-                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-                  />
-                  <Column
-                    field="eta"
-                    header="ETA"
-                    bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-                  />
-                  <Column
-                    header="Action"
-                    bodyStyle={{
-                      verticalAlign: "middle",
-                      textAlign: "center",
-                      overflow: "visible",
-                      position: "relative",
-                    }}
-                    body={(rowData, options) => (
-                      <div className="relative flex justify-center">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedOrder(rowData);
-                            setShowOrderModal(true);
-                          }}
-                          className="text-secondary hover:text-secondary font-medium text-sm w-full bg-secondary/20 hover:bg-secondary/40 cursor-pointer py-1 px-2 rounded"
-                        >
-                          View
-                        </button>
-                      </div>
-                    )}
-                  />
-                </DataTable>
-                ) : (
-                  <div className="p-8 text-center">
-                    <p className="text-gray-600">No recent orders found.</p>
-                  </div>
-                )}
+                    View All
+                  </button>
+                </div>
+
+                <div className="overflow-hidden">
+                  {loading ? (
+                    <div className="p-8 text-center">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#003C72]"></div>
+                      <p className="mt-2 text-gray-600">
+                        Loading recent orders...
+                      </p>
+                    </div>
+                  ) : orders && orders.length > 0 ? (
+                    <DataTable
+                      value={orders}
+                      stripedRows
+                      tableStyle={{ minWidth: "50rem" }}
+                      rowClassName={() => "hover:bg-gray-50"}
+                      size="small"
+                      // style={{ overflow: "visible" }}
+                      // scrollable={false}
+                      // columnResizeMode="expand"
+                      // resizableColumns
+                      // paginator
+                      // rows={10}
+                      // rowsPerPageOptions={[5, 10, 25, 50]}
+                    >
+                      <Column
+                        field="no"
+                        header="No."
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                        body={(rowData, options) => (
+                          <span className="text-gray-600">
+                            {options.rowIndex + 1}
+                          </span>
+                        )}
+                      />
+                      <Column
+                        field="route"
+                        header="Route Id"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        field="facilityName"
+                        header="Facilities"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        field="toteQty"
+                        header="Tote Qty"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                          textAlign: "center",
+                        }}
+                        headerStyle={{
+                          textAlign: "center",
+                        }}
+                        body={(rowData) => (
+                          <span className="text-gray-600">{rowData.toteQty || 1}</span>
+                        )}
+                      />
+                      <Column
+                        field="qty"
+                        header="Qty Of Products"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                          textAlign: "center",
+                        }}
+                        headerStyle={{
+                          textAlign: "center",
+                        }}
+                      />
+                      <Column
+                        field="status"
+                        header="In Transit"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                        body={(rowData) => getStatusStyle(rowData.status)}
+                      />
+                      <Column
+                        field="assignedDriver"
+                        header="Driver"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        field="status"
+                        header="Urgency"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                        body={(rowData) => getStatusStyle(rowData.status)}
+                      />
+                      <Column
+                        field="eta"
+                        header="ETA"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        header="Action"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          textAlign: "center",
+                          overflow: "visible",
+                          position: "relative",
+                        }}
+                        body={(rowData, options) => (
+                          <div className="relative flex justify-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedOrder(rowData);
+                                setShowOrderModal(true);
+                              }}
+                              className="text-secondary hover:text-secondary font-medium text-sm w-full bg-secondary/20 hover:bg-secondary/40 cursor-pointer py-1 px-2 rounded"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      />
+                    </DataTable>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <p className="text-gray-600">No recent orders found.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className={`col-span-${user?.role === "ADMIN" ? "4" : "5"}`}>
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <h3 className="text-base lg:text-lg font-semibold text-gray-900">
+                    Recent Orders
+                  </h3>
+                  <button
+                    className="text-[#003C72] hover:text-[#003C72] font-medium text-sm lg:text-base"
+                    onClick={() => router.push("/ordersv")}
+                  >
+                    View All
+                  </button>
+                </div>
+
+                <div className="overflow-hidden">
+                  {loading ? (
+                    <div className="p-8 text-center">
+                      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#003C72]"></div>
+                      <p className="mt-2 text-gray-600">
+                        Loading recent orders...
+                      </p>
+                    </div>
+                  ) : orders && orders.length > 0 ? (
+                    <DataTable
+                      value={orders}
+                      stripedRows
+                      tableStyle={{ minWidth: "50rem" }}
+                      rowClassName={() => "hover:bg-gray-50"}
+                      size="small"
+                      // style={{ overflow: "visible" }}
+                      // scrollable={false}
+                      // columnResizeMode="expand"
+                      // resizableColumns
+                      // paginator
+                      // rows={10}
+                      // rowsPerPageOptions={[5, 10, 25, 50]}
+                    >
+                      <Column
+                        field="no"
+                        header="No."
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                        body={(rowData, options) => (
+                          <span className="text-gray-600">
+                            {options.rowIndex + 1}
+                          </span>
+                        )}
+                      />
+                      <Column
+                        field="facilityName"
+                        header="Facility Name"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        field="orderId"
+                        header="Order ID"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        field="items"
+                        header="Item(s)"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        field="qty"
+                        header="Qty"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        field="status"
+                        header="Status"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                        body={(rowData) => getStatusStyle(rowData.status)}
+                      />
+                      <Column
+                        field="assignedDriver"
+                        header="Driver"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        field="route"
+                        header="Route"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        field="eta"
+                        header="ETA"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          fontSize: "14px",
+                        }}
+                      />
+                      <Column
+                        header="Action"
+                        bodyStyle={{
+                          verticalAlign: "middle",
+                          textAlign: "center",
+                          overflow: "visible",
+                          position: "relative",
+                        }}
+                        body={(rowData, options) => (
+                          <div className="relative flex justify-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedOrder(rowData);
+                                setShowOrderModal(true);
+                              }}
+                              className="text-secondary hover:text-secondary font-medium text-sm w-full bg-secondary/20 hover:bg-secondary/40 cursor-pointer py-1 px-2 rounded"
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      />
+                    </DataTable>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <p className="text-gray-600">No recent orders found.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -394,7 +585,9 @@ export default function Operational({
         <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Order Details</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Order Details
+              </h2>
               <button
                 onClick={() => {
                   setShowOrderModal(false);
@@ -408,36 +601,58 @@ export default function Operational({
             <div className="p-4">
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Order ID</dt>
-                  <dd className="text-sm text-gray-900">{selectedOrder.orderId || 'N/A'}</dd>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Order ID
+                  </dt>
+                  <dd className="text-sm text-gray-900">
+                    {selectedOrder.orderId || "N/A"}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Facility</dt>
-                  <dd className="text-sm text-gray-900">{selectedOrder.facilityName || 'N/A'}</dd>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Facility
+                  </dt>
+                  <dd className="text-sm text-gray-900">
+                    {selectedOrder.facilityName || "N/A"}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Item(s)</dt>
-                  <dd className="text-sm text-gray-900">{selectedOrder.items || 'N/A'}</dd>
+                  <dd className="text-sm text-gray-900">
+                    {selectedOrder.items || "N/A"}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Quantity</dt>
-                  <dd className="text-sm text-gray-900">{selectedOrder.qty || 'N/A'}</dd>
+                  <dt className="text-sm font-medium text-gray-500">
+                    Quantity
+                  </dt>
+                  <dd className="text-sm text-gray-900">
+                    {selectedOrder.qty || "N/A"}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Status</dt>
-                  <dd className="text-sm text-gray-900">{selectedOrder.status || 'N/A'}</dd>
+                  <dd className="text-sm text-gray-900">
+                    {selectedOrder.status || "N/A"}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Driver</dt>
-                  <dd className="text-sm text-gray-900">{selectedOrder.assignedDriver || 'N/A'}</dd>
+                  <dd className="text-sm text-gray-900">
+                    {selectedOrder.assignedDriver || "N/A"}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Route</dt>
-                  <dd className="text-sm text-gray-900">{selectedOrder.route || 'N/A'}</dd>
+                  <dd className="text-sm text-gray-900">
+                    {selectedOrder.route || "N/A"}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">ETA</dt>
-                  <dd className="text-sm text-gray-900">{selectedOrder.eta || 'N/A'}</dd>
+                  <dd className="text-sm text-gray-900">
+                    {selectedOrder.eta || "N/A"}
+                  </dd>
                 </div>
               </dl>
             </div>

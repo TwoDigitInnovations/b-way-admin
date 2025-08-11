@@ -91,6 +91,16 @@ export default function Layout({ children, title }) {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
                     <ul className="py-1">
                       <li
+                        // onClick={() => {
+                        //   router.push("/change-password");
+                        // }}
+                        className="px-4 py-2 text-primary hover:bg-gray-100 cursor-pointer text-sm
+                      transition-colors"
+                      >
+                        <Lock className="inline-block mr-2 w-4 h-4" />
+                        Add User
+                      </li> 
+                      <li
                         onClick={() => {
                           router.push("/change-password");
                         }}

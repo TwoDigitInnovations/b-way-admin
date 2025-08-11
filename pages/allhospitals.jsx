@@ -148,7 +148,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 value={formData.hospitalName}
                 onChange={handleInputChange}
                 placeholder="Name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring focus:ring-primary focus:border-primary text-gray-700"
                 required
               />
             </div>
@@ -163,7 +163,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 value={formData.contactPerson}
                 onChange={handleInputChange}
                 placeholder="Contact Person"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring focus:ring-primary focus:border-primary text-gray-700"
                 required
               />
             </div>
@@ -178,7 +178,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 value={formData.phone}
                 onChange={handleInputChange}
                 placeholder="Phone"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring focus:ring-primary focus:border-primary text-gray-700"
                 required
               />
             </div>
@@ -194,7 +194,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 value={formData.address}
                 onChange={handleInputChange}
                 placeholder="Address"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring focus:ring-primary focus:border-primary text-gray-700"
                 required
               />
             </div>
@@ -211,8 +211,8 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 onChange={(e) => setFormData((prev) => ({ ...prev, city: e.value }))}
                 dropdown
                 placeholder="Select or type city"
-                inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-secondary focus:!border-secondary !text-sm text-gray-700"
-                className="w-full max-w-[220px]"
+                inputClassName="w-full px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-primary focus:!border-primary !text-sm text-gray-700"
+                className="w-full"
                 panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                 itemTemplate={(item) => (
                   <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
@@ -231,8 +231,8 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 onChange={(e) => setFormData((prev) => ({ ...prev, state: e.value }))}
                 dropdown
                 placeholder="Select or type state"
-                inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-secondary focus:!border-secondary !text-sm text-gray-700"
-                className="w-full max-w-[220px]"
+                inputClassName="w-full px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-primary focus:!border-primary !text-sm text-gray-700"
+                className="w-full"
                 panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                 itemTemplate={(item) => (
                   <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
@@ -250,7 +250,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 value={formData.zipcode}
                 onChange={handleInputChange}
                 placeholder="Zipcode"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring focus:ring-primary focus:border-primary text-gray-700"
                 required
               />
             </div>
@@ -264,7 +264,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 name="assignedRoute"
                 value={formData.assignedRoute}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring focus:ring-primary focus:border-primary bg-white text-gray-700"
                 required
               >
                 <option value="">Select Assigned Route</option>
@@ -286,7 +286,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                   value={formData.deliveryWindow}
                   onChange={handleInputChange}
                   placeholder="2PM-6PM"
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary text-gray-700"
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring focus:ring-primary focus:border-primary text-gray-700"
                   required
                 />
                 <Clock className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2" />
@@ -301,7 +301,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 name="type"
                 value={formData.type}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary bg-white text-gray-700"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring focus:ring-primary focus:border-primary bg-white text-gray-700"
                 required
               >
                 <option value="">Select Type</option>
@@ -316,7 +316,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
           <div className="mt-8">
             <button
               type="submit"
-              className="bg-secondary hover:bg-secondary text-white px-8 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2"
+              className="bg-secondary hover:bg-secondary text-white px-8 py-2 rounded-md font-medium transition-colors focus:outline-none focus:ring focus:ring-primary focus:ring-offset-2"
             >
               Submit
             </button>

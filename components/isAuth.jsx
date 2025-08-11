@@ -26,7 +26,7 @@ const isAuth = (Component) => {
 
     const roleAccessMap = {
       ADMIN: [
-        "/dashboardv",
+        "/dashboard",
         "/ordersv",
         "/allroutes",
         "/allhospitals",
@@ -38,9 +38,10 @@ const isAuth = (Component) => {
         "/account-info",
         "/admin-only",
       ],
-      USER: ["/dashboardv", "/ordersv", "/allroutes", "/settings", "/change-password", "/account-info"],
-      DRIVER: ["/dashboardv", "/ordersv", "/my-deliveries", "/change-password", "/account-info"],
-      DISPATCHER: ["/dashboardv", "/ordersv", "/settings", "/billing-invoices", "/change-password", "/account-info"],
+      CLIENT: ["/dashboard", "/ordersv", "/allroutes", "/settings", "/change-password", "/account-info"],
+      HOSPITAL: ["/dashboard", "/ordersv", "/allroutes", "/settings", "/change-password", "/account-info"],
+      DRIVER: ["/dashboard", "/ordersv", "/my-deliveries", "/change-password", "/account-info"],
+      DISPATCHER: ["/dashboard", "/ordersv", "/settings", "/billing-invoices", "/change-password", "/account-info"],
     };
 
     const currentRoute = router?.pathname;

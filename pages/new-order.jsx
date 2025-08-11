@@ -11,8 +11,9 @@ import { fetchItems } from "@/store/itemSlice";
 import { getStateAndCityPicklist, getStateByCity } from "@/utils/states";
 import { AutoComplete } from "primereact/autocomplete";
 import Dropdown from "@/components/dropDown";
+import Link from "next/link";
 
-export default function NewOrder({ loader }) {
+export default function NewOrder({ loader, user }) {
   const [selectedItems, setSelectedItems] = useState([]);
   const [currentItemInput, setCurrentItemInput] = useState("");
   const [currentQty, setCurrentQty] = useState("");
@@ -26,6 +27,7 @@ export default function NewOrder({ loader }) {
   const [filteredStates, setFilteredStates] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [selectedCurrentItem, setSelectedCurrentItem] = useState(null);
+  const [maxQty, setMaxQty] = useState(0);
 
   useEffect(() => {
     dispatch(fetchItems());
@@ -56,12 +58,18 @@ export default function NewOrder({ loader }) {
       return;
     }
 
+    if (currentQty > maxQty) {
+      toast.error(`Maximum quantity for this item is ${maxQty}`);
+      return;
+    }
+
     const newItem = {
-      id: Date.now(), // Unique ID for React key
+      id: Date.now(),
       itemId: selectedCurrentItem._id,
       name: selectedCurrentItem.name,
       qty: parseInt(currentQty),
       pickupLocation: selectedCurrentItem.pickupLocation,
+      stock: selectedCurrentItem.stock,
     };
 
     setSelectedItems([...selectedItems, newItem]);
@@ -69,6 +77,7 @@ export default function NewOrder({ loader }) {
     setCurrentQty("");
     setSelectedCurrentItem(null);
     setFilteredItems(items);
+    setMaxQty(0);
     toast.success("Item added successfully");
   };
 
@@ -224,17 +233,14 @@ export default function NewOrder({ loader }) {
                         const selectedItem = e.value;
                         setCurrentItemInput(selectedItem.name);
                         setSelectedCurrentItem(selectedItem);
+                        console.log("Selected item:", selectedItem.stock);
+                        setMaxQty(selectedItem.stock || 0);
                       }}
                       dropdown
                       placeholder="Select or type item"
                       inputClassName="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
                       className="w-full"
                       panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
-                      // itemTemplate={(item) => (
-                      //   <div className="px-3 py-2 hover:bg-gray-100 text-sm">
-                      //     {item.name}
-                      //   </div>
-                      // )}
                     />
                   </div>
                   <div>
@@ -247,6 +253,7 @@ export default function NewOrder({ loader }) {
                       onChange={(e) => setCurrentQty(e.target.value)}
                       placeholder="Qty"
                       min="1"
+                      max={maxQty > 0 ? maxQty : undefined}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                     />
                   </div>
@@ -286,9 +293,23 @@ export default function NewOrder({ loader }) {
                                 <input
                                   type="number"
                                   value={item.qty}
-                                  onChange={(e) =>
-                                    updateItemQty(item.id, e.target.value)
-                                  }
+                                  onChange={(e) => {
+                                    const newQty = parseInt(e.target.value);
+                                    if (newQty < 1) return;
+                                    if (newQty > item.stock) {
+                                      toast.error(
+                                        `Maximum quantity for this item is ${item.stock}`
+                                      );
+                                      return;
+                                    }
+                                    updateItemQty(item.id, newQty);
+                                  }}
+                                  onBlur={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    if (!value || value < 1) {
+                                      updateItemQty(item.id, 1);
+                                    }
+                                  }}
                                   min="1"
                                   className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-black focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 />
@@ -450,13 +471,32 @@ export default function NewOrder({ loader }) {
                 </div> */}
 
                 {/* Submit Button */}
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap justify-between items-center">
                   <div className="text-sm text-gray-600">
                     {selectedItems.length > 0 && (
-                      <span>
-                        Total Items: {selectedItems.length} | Total Quantity:{" "}
-                        {selectedItems.reduce((sum, item) => sum + item.qty, 0)}
-                      </span>
+                      <div className="grid items-start">
+                        <span>
+                          Total Items: {selectedItems.length} | Total Quantity:{" "}
+                          {selectedItems.reduce(
+                            (sum, item) => sum + item.qty,
+                            0
+                          )}
+                        </span>
+                        <span className="mt-1">
+                          Delivery Location:{" "}
+                          {user?.delivery_Address
+                            ? `${user.delivery_Address.address}, ${user.delivery_Address.city}, ${user.delivery_Address.state} ${user.delivery_Address.zipcode}`
+                            : "Not provided"}
+                          <Link
+                            href="/account-info"
+                            className="text-secondary hover:underline ml-2"
+                          >
+                            <span className="text-secondary hover:underline">
+                              Update Address
+                            </span>
+                          </Link>
+                        </span>
+                      </div>
                     )}
                   </div>
                   <button

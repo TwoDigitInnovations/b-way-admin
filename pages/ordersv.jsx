@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   MoreHorizontal,
   Eye,
@@ -179,7 +179,7 @@ function Orders({ loader, user }) {
         handleEditClick(order);
       },
     },
-    ...(user.role !== "USER"
+    ...(user.role !== "ADMIN"
       ? [
           {
             label: "Assign Route",
@@ -205,7 +205,7 @@ function Orders({ loader, user }) {
         console.log("Download Return Load clicked", order);
       },
     },
-    ...(user.role === "USER"
+    ...(user.role === "ADMIN"
       ? [
           {
             label: "Delete",
@@ -344,13 +344,8 @@ function Orders({ loader, user }) {
       loader(true);
     }
     try {
-      // Use user-specific endpoint for regular users, admin endpoint for admins
-      const endpoint =
-        user?.role === "ADMIN"
-          ? `/order?page=${currentPage}&limit=${limit}`
-          : `/order/my-orders?page=${currentPage}&limit=${limit}`;
 
-      const response = await Api("GET", endpoint, null, router);
+      const response = await Api("GET", `/order?page=${currentPage}&limit=${limit}`, null, router);
 
       if (response.status) {
         setOrders(response.data);
@@ -451,17 +446,20 @@ function Orders({ loader, user }) {
     }
     setFilteredDeliveryStates(filtered);
   };
+  const itemList = useMemo(
+    () =>
+      items.map((item) => ({
+        ...item,
+      })),
+    [items]
+  );
   // Autocomplete search for items
   const searchItems = (event) => {
-    let filtered = [];
-    if (!event.query || event.query.length === 0) {
-      filtered = items || [];
-    } else {
-      filtered = (items || []).filter((item) =>
-        item && item.name && item.name.toLowerCase().includes(event.query.toLowerCase())
-      );
-    }
-    setFilteredItems(filtered);
+    const query = event.query.toLowerCase();
+    const _filteredItems = itemList.filter((item) =>
+      item.name.toLowerCase().includes(query)
+    );
+    setFilteredItems(_filteredItems);
   };
 
   return (
@@ -649,7 +647,7 @@ function Orders({ loader, user }) {
             <Formik
               key={selectedOrder?._id || "new"} // Force reinitialize when order changes
               initialValues={{
-                items: Array.isArray(selectedOrder?.items) 
+                items: Array.isArray(selectedOrder?.items)
                   ? selectedOrder.items[0]?._id || ""
                   : selectedOrder?.items?._id || selectedOrder?.items || "",
                 qty: selectedOrder?.qty || "",
@@ -694,17 +692,19 @@ function Orders({ loader, user }) {
                         <AutoComplete
                           value={
                             // If values.items is an ID, find the item object
-                            typeof values.items === 'string' 
-                              ? filteredItems.find(item => item._id === values.items) || null
+                            typeof values.items === "string"
+                              ? filteredItems.find(
+                                  (item) => item._id === values.items
+                                ) || null
                               : values.items || null
                           }
                           suggestions={filteredItems}
                           completeMethod={searchItems}
-                          onDropdownClick={() => {
-                            if (items && Array.isArray(items)) {
-                              setFilteredItems(items);
-                            }
-                          }}
+                          // onDropdownClick={() => {
+                          //   if (items && Array.isArray(items)) {
+                          //     setFilteredItems(items);
+                          //   }
+                          // }}
                           field="name"
                           onChange={(e) => {
                             // Store the item ID in the form
@@ -713,14 +713,14 @@ function Orders({ loader, user }) {
                           }}
                           dropdown
                           placeholder="Select or type item"
-                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
-                          className="w-full max-w-[220px]"
+                          inputClassName="w-full px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                          className="w-full"
                           panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
-                          itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
-                              {item?.name || 'Unknown Item'}
-                            </div>
-                          )}
+                          // itemTemplate={(item) => (
+                          //   <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                          //     {item?.name || 'Unknown Item'}
+                          //   </div>
+                          // )}
                           emptyTemplate={() => (
                             <div className="px-3 py-2 text-sm text-gray-500">
                               No items found

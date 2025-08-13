@@ -35,9 +35,21 @@ import {
   selectTotal,
 } from "@/store/routeSlice";
 import { fetchDrivers } from "@/store/driverSlice";
-import { MultiSelect } from "primereact/multiselect";
-import { AutoComplete } from "primereact/autocomplete";
 import { getStateAndCityPicklist } from "@/utils/states";
+import {
+  Autocomplete,
+  MenuItem,
+  Select,
+  TextField,
+  Chip,
+  Box,
+} from "@mui/material";
+import { fetchHospital } from "@/store/hospitalSlice";
+
+// Get states and cities data
+const statesAndCities = getStateAndCityPicklist();
+const allCities = Object.values(statesAndCities).flat();
+const allStates = Object.keys(statesAndCities);
 
 // Validation schema using Yup
 const validationSchema = Yup.object({
@@ -62,7 +74,7 @@ const validationSchema = Yup.object({
       /^\d{5}(-\d{4})?$/,
       "Invalid zipcode format (e.g., 12345 or 12345-6789)"
     ),
-  stops: Yup.string().required("At least one stop is required"),
+  stops: Yup.array().min(1, "At least one stop is required"),
   assignedDriver: Yup.string().required("Assigned driver is required"),
   eta: Yup.string().required("ETA is required"),
   activeDays: Yup.array().min(1, "At least one active day is required"),
@@ -82,7 +94,7 @@ const initialValues = {
   endCity: "",
   endState: "",
   endZipcode: "",
-  stops: "",
+  stops: [],
   assignedDriver: "",
   eta: "",
   activeDays: [],
@@ -105,14 +117,23 @@ function RoutesSchedules({ loader }) {
   const totalPages = useSelector(selectTotal);
   const loading = useSelector(selectLoading);
   const { drivers, assignedDriver } = useSelector((state) => state.driver);
+  const { hospitals } = useSelector((state) => state.hospital);
 
-  const [filteredStartCities, setFilteredStartCities] = useState(allCities);
-  const [filteredStartStates, setFilteredStartStates] = useState(allStates);
-  const [filteredEndCities, setFilteredEndCities] = useState(allCities);
-  const [filteredEndStates, setFilteredEndStates] = useState(allStates);
+  const ITEM_HEIGHT = 48;
+  const ITEM_PADDING_TOP = 8;
+
+  const MenuProps = {
+    PaperProps: {
+      style: {
+        maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+        width: 250,
+      },
+    },
+  };
 
   useEffect(() => {
     dispatch(fetchRoutes({ page: currentPage, limit }));
+    dispatch(fetchHospital());
   }, [dispatch, currentPage, limit]);
 
   useEffect(() => {
@@ -175,10 +196,9 @@ function RoutesSchedules({ loader }) {
           state: values.endState,
           zipcode: values.endZipcode,
         },
-        stops: values.stops
-          .split(",")
-          .map((stop) => ({ name: stop.trim(), address: stop.trim() }))
-          .filter((stop) => stop.name),
+        stops: Array.isArray(values.stops)
+          ? values.stops.map((stop) => ({ name: stop, address: stop }))
+          : [],
         assignedDriver: values.assignedDriver,
         eta: values.eta,
         activeDays: Array.isArray(values.activeDays)
@@ -190,9 +210,7 @@ function RoutesSchedules({ loader }) {
       };
 
       const method = editingRoute ? "PUT" : "POST";
-      const url = editingRoute
-        ? `/route/${editingRoute._id}`
-        : "/route/create";
+      const url = editingRoute ? `/route/${editingRoute._id}` : "/route/create";
 
       const response = await Api(method, url, transformedData);
 
@@ -340,39 +358,6 @@ function RoutesSchedules({ loader }) {
   useEffect(() => {
     loader(loading);
   }, [loading, loader]);
-
-  // Autocomplete search for start city
-  const searchStartCities = (event) => {
-    const query = event.query.toLowerCase();
-    const _filteredCities = allCities.filter((city) =>
-      city.toLowerCase().includes(query)
-    );
-    setFilteredStartCities(_filteredCities);
-  };
-  // Autocomplete search for start state
-  const searchStartStates = (event) => {
-    const query = event.query.toLowerCase();
-    const _filteredStates = allStates.filter((state) =>
-      state.toLowerCase().includes(query)
-    );
-    setFilteredStartStates(_filteredStates);
-  };
-  // Autocomplete search for end city
-  const searchEndCities = (event) => {
-    const query = event.query.toLowerCase();
-    const _filteredCities = allCities.filter((city) =>
-      city.toLowerCase().includes(query)
-    );
-    setFilteredEndCities(_filteredCities);
-  };
-  // Autocomplete search for end state
-  const searchEndStates = (event) => {
-    const query = event.query.toLowerCase();
-    const _filteredStates = allStates.filter((state) =>
-      state.toLowerCase().includes(query)
-    );
-    setFilteredEndStates(_filteredStates);
-  };
 
   return (
     <Layout title="All Routes & Schedules">
@@ -599,10 +584,18 @@ function RoutesSchedules({ loader }) {
                         editingRoute?.endLocation?.zipcode ||
                         "",
                       stops: selectedRouteData?.stops
-                        ? selectedRouteData.stops.join(", ")
+                        ? Array.isArray(selectedRouteData.stops)
+                          ? selectedRouteData.stops.map((stop) =>
+                              typeof stop === "string" ? stop : stop.name
+                            )
+                          : []
                         : editingRoute?.stops
-                        ? editingRoute.stops.join(", ")
-                        : "",
+                        ? Array.isArray(editingRoute.stops)
+                          ? editingRoute.stops.map((stop) =>
+                              typeof stop === "string" ? stop : stop.name
+                            )
+                          : []
+                        : [],
                       assignedDriver:
                         selectedRouteData?.assignedDriver?._id ||
                         editingRoute?.assignedDriver?._id ||
@@ -610,10 +603,19 @@ function RoutesSchedules({ loader }) {
                         editingRoute?.assignedDriver ||
                         "",
                       eta: selectedRouteData?.eta || editingRoute?.eta || "",
-                      activeDays:
-                        selectedRouteData?.activeDays ||
-                        editingRoute?.activeDays ||
-                        [],
+                      activeDays: selectedRouteData?.activeDays
+                        ? Array.isArray(selectedRouteData.activeDays)
+                          ? selectedRouteData.activeDays.map((stop) =>
+                              typeof stop === "string" ? stop : stop.name
+                            )
+                          : []
+                        : editingRoute?.activeDays
+                        ? Array.isArray(editingRoute.activeDays)
+                          ? editingRoute.activeDays.map((stop) =>
+                              typeof stop === "string" ? stop : stop.name
+                            )
+                          : []
+                        : [],
                       status:
                         selectedRouteData?.status || editingRoute?.status || "",
                     }
@@ -631,19 +633,38 @@ function RoutesSchedules({ loader }) {
                       Route Name *
                     </label>
                     <Field
-                      type="text"
                       name="routeName"
-                      placeholder="Enter route name"
-                      className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                        touched.routeName && errors.routeName
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
-                    />
-                    <ErrorMessage
-                      name="routeName"
-                      component="div"
-                      className="text-red-500 text-sm mt-1"
+                      render={({ field, meta }) => (
+                        <>
+                          <TextField
+                            {...field}
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                height: "40px",
+                                fontSize: "14px",
+                                "& fieldset": {
+                                  borderColor: "#d1d5db",
+                                },
+                                "&:hover fieldset": {
+                                  borderColor: "#9ca3af",
+                                },
+                                "&.Mui-focused fieldset": {
+                                  borderColor: "#3b82f6",
+                                  borderWidth: "2px",
+                                },
+                              },
+                              "& .MuiInputBase-input": {
+                                color: "#374151",
+                                fontSize: "14px",
+                              },
+                            }}
+                            fullWidth
+                            placeholder="Enter route name"
+                            error={meta.touched && !!meta.error}
+                            helperText={meta.touched && meta.error}
+                          />
+                        </>
+                      )}
                     />
                   </div>
 
@@ -658,40 +679,80 @@ function RoutesSchedules({ loader }) {
                           Address *
                         </label>
                         <Field
-                          type="text"
                           name="startAddress"
-                          placeholder="Address *"
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.startAddress && errors.startAddress
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                        />
-                        <ErrorMessage
-                          name="startAddress"
-                          component="div"
-                          className="text-red-500 text-xs mt-1"
+                          render={({ field, meta }) => (
+                            <>
+                              <TextField
+                                {...field}
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    height: "40px",
+                                    fontSize: "14px",
+                                    "& fieldset": {
+                                      borderColor: "#d1d5db",
+                                    },
+                                    "&:hover fieldset": {
+                                      borderColor: "#9ca3af",
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                      borderColor: "#3b82f6",
+                                      borderWidth: "2px",
+                                    },
+                                  },
+                                  "& .MuiInputBase-input": {
+                                    color: "#374151",
+                                    fontSize: "14px",
+                                  },
+                                }}
+                                fullWidth
+                                placeholder="Address *"
+                                error={meta.touched && !!meta.error}
+                                helperText={meta.touched && meta.error}
+                              />
+                            </>
+                          )}
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           City *
                         </label>
-                        <AutoComplete
+                        <Autocomplete
                           value={values.startCity}
-                          suggestions={filteredStartCities}
-                          completeMethod={searchStartCities}
-                          onChange={(e) => setFieldValue("startCity", e.value)}
-                          dropdown
-                          placeholder="Select or type city"
-                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
-                          className="w-full max-w-[220px]"
-                          panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
-                          itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
-                              {item}
-                            </div>
+                          onChange={(event, newValue) =>
+                            setFieldValue("startCity", newValue || "")
+                          }
+                          options={allCities}
+                          freeSolo={false}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              placeholder="Select or type city"
+                              variant="outlined"
+                              size="small"
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                            />
                           )}
+                          sx={{ width: "100%", maxWidth: "220px" }}
                         />
                         <ErrorMessage
                           name="startCity"
@@ -703,21 +764,42 @@ function RoutesSchedules({ loader }) {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           State *
                         </label>
-                        <AutoComplete
+                        <Autocomplete
                           value={values.startState}
-                          suggestions={filteredStartStates}
-                          completeMethod={searchStartStates}
-                          onChange={(e) => setFieldValue("startState", e.value)}
-                          dropdown
-                          placeholder="Select or type state"
-                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
-                          className="w-full max-w-[220px]"
-                          panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
-                          itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
-                              {item}
-                            </div>
+                          onChange={(event, newValue) =>
+                            setFieldValue("startState", newValue || "")
+                          }
+                          options={allStates}
+                          freeSolo={false}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              placeholder="Select or type state"
+                              variant="outlined"
+                              size="small"
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                            />
                           )}
+                          sx={{ width: "100%", maxWidth: "220px" }}
                         />
                         <ErrorMessage
                           name="startState"
@@ -730,20 +812,39 @@ function RoutesSchedules({ loader }) {
                           Zipcode *
                         </label>
                         <Field
-                          type="text"
                           name="startZipcode"
-                          placeholder="Zipcode *"
-                          maxLength={5}
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.startZipcode && errors.startZipcode
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                        />
-                        <ErrorMessage
-                          name="startZipcode"
-                          component="div"
-                          className="text-red-500 text-xs mt-1"
+                          render={({ field, meta }) => (
+                            <>
+                              <TextField
+                                {...field}
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    height: "40px",
+                                    fontSize: "14px",
+                                    "& fieldset": {
+                                      borderColor: "#d1d5db",
+                                    },
+                                    "&:hover fieldset": {
+                                      borderColor: "#9ca3af",
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                      borderColor: "#3b82f6",
+                                      borderWidth: "2px",
+                                    },
+                                  },
+                                  "& .MuiInputBase-input": {
+                                    color: "#374151",
+                                    fontSize: "14px",
+                                  },
+                                }}
+                                fullWidth
+                                placeholder="Zipcode *"
+                                inputProps={{ maxLength: 5 }}
+                                error={meta.touched && !!meta.error}
+                                helperText={meta.touched && meta.error}
+                              />
+                            </>
+                          )}
                         />
                       </div>
                     </div>
@@ -760,40 +861,80 @@ function RoutesSchedules({ loader }) {
                           Address *
                         </label>
                         <Field
-                          type="text"
                           name="endAddress"
-                          placeholder="Address *"
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.endAddress && errors.endAddress
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                        />
-                        <ErrorMessage
-                          name="endAddress"
-                          component="div"
-                          className="text-red-500 text-xs mt-1"
+                          render={({ field, meta }) => (
+                            <>
+                              <TextField
+                                {...field}
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    height: "40px",
+                                    fontSize: "14px",
+                                    "& fieldset": {
+                                      borderColor: "#d1d5db",
+                                    },
+                                    "&:hover fieldset": {
+                                      borderColor: "#9ca3af",
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                      borderColor: "#3b82f6",
+                                      borderWidth: "2px",
+                                    },
+                                  },
+                                  "& .MuiInputBase-input": {
+                                    color: "#374151",
+                                    fontSize: "14px",
+                                  },
+                                }}
+                                fullWidth
+                                placeholder="Address *"
+                                error={meta.touched && !!meta.error}
+                                helperText={meta.touched && meta.error}
+                              />
+                            </>
+                          )}
                         />
                       </div>
                       <div className="flex flex-col">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           City *
                         </label>
-                        <AutoComplete
+                        <Autocomplete
                           value={values.endCity}
-                          suggestions={filteredEndCities}
-                          completeMethod={searchEndCities}
-                          onChange={(e) => setFieldValue("endCity", e.value)}
-                          dropdown
-                          placeholder="Select or type city"
-                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
-                          className="w-full max-w-[220px]"
-                          panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
-                          itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
-                              {item}
-                            </div>
+                          onChange={(event, newValue) =>
+                            setFieldValue("endCity", newValue || "")
+                          }
+                          options={allCities}
+                          freeSolo={false}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              placeholder="Select or type city"
+                              variant="outlined"
+                              size="small"
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                            />
                           )}
+                          sx={{ width: "100%", maxWidth: "220px" }}
                         />
                         <ErrorMessage
                           name="endCity"
@@ -805,21 +946,42 @@ function RoutesSchedules({ loader }) {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           State *
                         </label>
-                        <AutoComplete
+                        <Autocomplete
                           value={values.endState}
-                          suggestions={filteredEndStates}
-                          completeMethod={searchEndStates}
-                          onChange={(e) => setFieldValue("endState", e.value)}
-                          dropdown
-                          placeholder="Select or type state"
-                          inputClassName="w-full max-w-[220px] px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
-                          className="w-full max-w-[220px]"
-                          panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
-                          itemTemplate={(item) => (
-                            <div className="px-3 py-2 hover:bg-gray-100 text-sm">
-                              {item}
-                            </div>
+                          onChange={(event, newValue) =>
+                            setFieldValue("endState", newValue || "")
+                          }
+                          options={allStates}
+                          freeSolo={false}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              placeholder="Select or type city"
+                              variant="outlined"
+                              size="small"
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                            />
                           )}
+                          sx={{ width: "100%", maxWidth: "220px" }}
                         />
                         <ErrorMessage
                           name="endState"
@@ -832,20 +994,39 @@ function RoutesSchedules({ loader }) {
                           Zipcode *
                         </label>
                         <Field
-                          type="text"
                           name="endZipcode"
-                          placeholder="Zipcode *"
-                          maxLength={5}
-                          className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.endZipcode && errors.endZipcode
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
-                        />
-                        <ErrorMessage
-                          name="endZipcode"
-                          component="div"
-                          className="text-red-500 text-xs mt-1"
+                          render={({ field, meta }) => (
+                            <>
+                              <TextField
+                                {...field}
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    height: "40px",
+                                    fontSize: "14px",
+                                    "& fieldset": {
+                                      borderColor: "#d1d5db",
+                                    },
+                                    "&:hover fieldset": {
+                                      borderColor: "#9ca3af",
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                      borderColor: "#3b82f6",
+                                      borderWidth: "2px",
+                                    },
+                                  },
+                                  "& .MuiInputBase-input": {
+                                    color: "#374151",
+                                    fontSize: "14px",
+                                  },
+                                }}
+                                fullWidth
+                                placeholder="Zipcode *"
+                                inputProps={{ maxLength: 5 }}
+                                error={meta.touched && !!meta.error}
+                                helperText={meta.touched && meta.error}
+                              />
+                            </>
+                          )}
                         />
                       </div>
                     </div>
@@ -859,56 +1040,81 @@ function RoutesSchedules({ loader }) {
                         Stops *
                       </label>
                       <Field
-                        as="select"
                         name="stops"
-                        className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                          touched.stops && errors.stops
-                            ? "border-red-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        <option value="">Select Stops</option>
-                        <option
-                          value="Jammu Hospital"
-                          selected={values.stops === "Jammu Hospital"}
-                        >
-                          Jammu Hospital
-                        </option>
-                        <option
-                          value="Capitol Hospital"
-                          selected={values.stops === "Capitol Hospital"}
-                        >
-                          Capitol Hospital
-                        </option>
-                        <option
-                          value="Bellevue Hospital"
-                          selected={values.stops === "Bellevue Hospital"}
-                        >
-                          Bellevue Hospital
-                        </option>
-                        <option
-                          value="Oxford Hospital"
-                          selected={values.stops === "Oxford Hospital"}
-                        >
-                          Oxford Hospital
-                        </option> 
-                        <option
-                          value="CVS Pharmacy"
-                          selected={values.stops === "CVS Pharmacy"}
-                        >
-                          CVS Pharmacy
-                        </option>
-                        <option
-                          value="Jim Pharmacy"
-                          selected={values.stops === "Jim Pharmacy"}
-                        >
-                          Jim Pharmacy
-                        </option>
-                      </Field>
-                      <ErrorMessage
-                        name="stops"
-                        component="div"
-                        className="text-red-500 text-xs mt-1"
+                        render={({ field, meta }) => (
+                          <>
+                            <Select
+                              {...field}
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                              fullWidth
+                              displayEmpty
+                              MenuProps={MenuProps}
+                              multiple
+                              value={field.value || []}
+                              renderValue={(selected) => {
+                                if (selected.length === 0) {
+                                  return (
+                                    <span style={{ color: "#9ca3af" }}>
+                                      Select Stops
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: 0.5,
+                                    }}
+                                  >
+                                    {selected.map((value) => (
+                                      <Chip
+                                        key={value}
+                                        label={value}
+                                        size="small"
+                                        sx={{
+                                          height: "24px",
+                                          fontSize: "12px",
+                                        }}
+                                      />
+                                    ))}
+                                  </Box>
+                                );
+                              }}
+                              error={meta.touched && !!meta.error}
+                            >
+                              {hospitals.map((item, index) => (
+                                <MenuItem key={index} value={item.name}>
+                                  {item.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {meta.touched && meta.error && (
+                              <div className="text-red-500 text-xs mt-1">
+                                {meta.error}
+                              </div>
+                            )}
+                          </>
+                        )}
                       />
                     </div>
 
@@ -918,29 +1124,54 @@ function RoutesSchedules({ loader }) {
                         Assigned Driver *
                       </label>
                       <Field
-                        as="select"
                         name="assignedDriver"
-                        className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                          touched.assignedDriver && errors.assignedDriver
-                            ? "border-red-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        <option value="">Select Assigned Driver</option>
-                        {drivers.map((driver) => (
-                          <option
-                            key={driver._id}
-                            value={driver._id}
-                            selected={driver._id === values.assignedDriver}
-                          >
-                            {driver.driver.name}
-                          </option>
-                        ))}
-                      </Field>
-                      <ErrorMessage
-                        name="assignedDriver"
-                        component="div"
-                        className="text-red-500 text-xs mt-1"
+                        render={({ field, meta }) => (
+                          <>
+                            <Select
+                              {...field}
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                              fullWidth
+                              displayEmpty
+                              MenuProps={MenuProps}
+                              error={meta.touched && !!meta.error}
+                            >
+                              <MenuItem value="" disabled>
+                                <span style={{ color: "#9ca3af" }}>
+                                  Select Drivers
+                                </span>
+                              </MenuItem>
+                              {drivers.map((driver) => (
+                                <MenuItem key={driver._id} value={driver._id}>
+                                  {driver.driver.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {meta.touched && meta.error && (
+                              <div className="text-red-500 text-xs mt-1">
+                                {meta.error}
+                              </div>
+                            )}
+                          </>
+                        )}
                       />
                     </div>
 
@@ -951,22 +1182,41 @@ function RoutesSchedules({ loader }) {
                       </label>
                       <div className="relative">
                         <Field
-                          type="text"
                           name="eta"
-                          placeholder="2:10 PM"
-                          className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                            touched.eta && errors.eta
-                              ? "border-red-500"
-                              : "border-gray-300"
-                          }`}
+                          render={({ field, meta }) => (
+                            <>
+                              <TextField
+                                {...field}
+                                sx={{
+                                  "& .MuiOutlinedInput-root": {
+                                    height: "40px",
+                                    fontSize: "14px",
+                                    "& fieldset": {
+                                      borderColor: "#d1d5db",
+                                    },
+                                    "&:hover fieldset": {
+                                      borderColor: "#9ca3af",
+                                    },
+                                    "&.Mui-focused fieldset": {
+                                      borderColor: "#3b82f6",
+                                      borderWidth: "2px",
+                                    },
+                                  },
+                                  "& .MuiInputBase-input": {
+                                    color: "#374151",
+                                    fontSize: "14px",
+                                  },
+                                }}
+                                fullWidth
+                                placeholder="2:10 PM"
+                                error={meta.touched && !!meta.error}
+                                helperText={meta.touched && meta.error}
+                              />
+                            </>
+                          )}
                         />
-                        <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Clock className="absolute right-3 top-3 transform w-4 h-4 text-gray-400" />
                       </div>
-                      <ErrorMessage
-                        name="eta"
-                        component="div"
-                        className="text-red-500 text-xs mt-1"
-                      />
                     </div>
 
                     {/* Active Days */}
@@ -974,19 +1224,87 @@ function RoutesSchedules({ loader }) {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Active Days *
                       </label>
-                      <MultiSelect
-                        value={values.activeDays}
-                        onChange={(e) => setFieldValue("activeDays", e.value)}
-                        options={days}
-                        optionLabel="name"
-                        placeholder="Select Active Days"
-                        maxSelectedLabels={3}
-                      />
-                      <ErrorMessage
-                        name="activeDays"
-                        component="div"
-                        className="text-red-500 text-xs mt-1"
-                      />
+                      <Field name="activeDays">
+                        {({ field, meta }) => (
+                          <>
+                            <Select
+                              {...field}
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                              fullWidth
+                              displayEmpty
+                              multiple
+                              MenuProps={MenuProps}
+                              value={field.value || []}
+                              renderValue={(selected) => {
+                                if (selected.length === 0) {
+                                  return (
+                                    <span style={{ color: "#9ca3af" }}>
+                                      Select Active Days
+                                    </span>
+                                  );
+                                }
+                                return (
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: 0.5,
+                                    }}
+                                  >
+                                    {selected.map((value) => {
+                                      const dayName =
+                                        days.find((day) => day.value === value)
+                                          ?.name || value;
+                                      return (
+                                        <Chip
+                                          key={value}
+                                          label={dayName}
+                                          size="small"
+                                          sx={{
+                                            height: "24px",
+                                            fontSize: "12px",
+                                          }}
+                                        />
+                                      );
+                                    })}
+                                  </Box>
+                                );
+                              }}
+                              error={meta.touched && !!meta.error}
+                            >
+                              {days.map((day) => (
+                                <MenuItem key={day.value} value={day.value}>
+                                  {day.name}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                            {meta.touched && meta.error && (
+                              <div className="text-red-500 text-xs mt-1">
+                                {meta.error}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </Field>
                     </div>
 
                     {/* Status */}
@@ -995,23 +1313,52 @@ function RoutesSchedules({ loader }) {
                         Status *
                       </label>
                       <Field
-                        as="select"
                         name="status"
-                        className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                          touched.status && errors.status
-                            ? "border-red-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        <option value="">Select Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Archive">Archive</option>
-                      </Field>
-                      <ErrorMessage
-                        name="status"
-                        component="div"
-                        className="text-red-500 text-xs mt-1"
+                        render={({ field, meta }) => (
+                          <>
+                            <Select
+                              {...field}
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                              fullWidth
+                              displayEmpty
+                              MenuProps={MenuProps}
+                              error={meta.touched && !!meta.error}
+                            >
+                              <MenuItem value="" disabled>
+                                <span style={{ color: "#9ca3af" }}>
+                                  Select Status
+                                </span>
+                              </MenuItem>
+                              <MenuItem value="Active">Active</MenuItem>
+                              <MenuItem value="Completed">Completed</MenuItem>
+                              <MenuItem value="Archive">Archive</MenuItem>
+                            </Select>
+                            {meta.touched && meta.error && (
+                              <div className="text-red-500 text-xs mt-1">
+                                {meta.error}
+                              </div>
+                            )}
+                          </>
+                        )}
                       />
                     </div>
                   </div>
@@ -1189,7 +1536,7 @@ function RoutesSchedules({ loader }) {
       {/* Map Modal */}
       {mapModal && (
         <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div className="flex items-center space-x-2">
                 <Map className="w-5 h-5 text-blue-600" />
@@ -1227,13 +1574,13 @@ function RoutesSchedules({ loader }) {
             </div>
             <div className="px-4 pb-4">
               <div className="bg-gray-50 rounded-lg p-3">
-                <h4 className="font-medium text-gray-700 mb-2">
-                  Route Information
+                <h4 className="font-semibold text-gray-700 mb-2">
+                  Route Information:
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-gray-500">Driver:</span>
-                    <p className="font-medium">
+                    <p className="font-medium text-gray-400">
                       {selectedRouteData?.assignedDriver?.driver?.name ||
                         selectedRowData?.assignedDriver?.driver?.name ||
                         "N/A"}
@@ -1241,19 +1588,19 @@ function RoutesSchedules({ loader }) {
                   </div>
                   <div>
                     <span className="text-gray-500">Status:</span>
-                    <p className="font-medium">
+                    <p className="font-medium text-gray-400">
                       {selectedRouteData?.status || selectedRowData?.status}
                     </p>
                   </div>
                   <div>
                     <span className="text-gray-500">ETA:</span>
-                    <p className="font-medium">
+                    <p className="font-medium text-gray-400">
                       {selectedRouteData?.eta || selectedRowData?.eta}
                     </p>
                   </div>
                   <div>
                     <span className="text-gray-500">Active Days:</span>
-                    <p className="font-medium">
+                    <p className="font-medium text-gray-400">
                       {(
                         selectedRouteData?.activeDays ||
                         selectedRowData?.activeDays ||
@@ -1282,7 +1629,3 @@ const days = [
   { name: "Saturday", value: "Sat" },
   { name: "Sunday", value: "Sun" },
 ];
-
-const statesAndCities = getStateAndCityPicklist();
-const allCities = Object.values(statesAndCities).flat();
-const allStates = Object.keys(statesAndCities);

@@ -87,7 +87,7 @@ function Dashboard({user}) {
       icon: "/images/img5.png",
       // trend: "up",
       color: "yellow",
-      role: ["CLIENT"],
+      role: ["CLIENT", "HOSPITAL"],
     },{
       title: "Missing Delivery",
       value: "18",
@@ -142,10 +142,10 @@ function Dashboard({user}) {
       title: "Daily Work Completed",
       value: "50%",
       changeText: "Based on total totes delivered today",
-      icon: "/images/img4.png",
+      icon: "/images/wait.png",
       color: "blue",
       // trend: "up",
-      role: ["CLIENT"],
+      role: ["CLIENT", "HOSPITAL"],
     },
     {
       title: "Available Drivers",

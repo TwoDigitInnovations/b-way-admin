@@ -316,3 +316,11 @@ table .p-datatable-thead tr th {
 .p-button:enabled:focus {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }
+
+.css-abx53v-MuiInputBase-root-MuiOutlinedInput-root-MuiSelect-root{
+  height: 40px !important;
+}
+
+.css-er619e-MuiFormHelperText-root{
+  margin-left: 0px !important;
+}

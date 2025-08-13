@@ -208,14 +208,18 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 value={formData.city}
                 suggestions={filteredCities}
                 completeMethod={searchCities}
-                onChange={(e) => setFormData((prev) => ({ ...prev, city: e.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, city: e.value }))
+                }
                 dropdown
                 placeholder="Select or type city"
                 inputClassName="w-full px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-primary focus:!border-primary !text-sm text-gray-700"
                 className="w-full"
                 panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                 itemTemplate={(item) => (
-                  <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                  <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                    {item}
+                  </div>
                 )}
               />
             </div>
@@ -228,14 +232,18 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
                 value={formData.state}
                 suggestions={filteredStates}
                 completeMethod={searchStates}
-                onChange={(e) => setFormData((prev) => ({ ...prev, state: e.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, state: e.value }))
+                }
                 dropdown
                 placeholder="Select or type state"
                 inputClassName="w-full px-3 py-2 min-h-[40px] border border-gray-300 rounded-md focus:outline-none focus:!ring-2 focus:!ring-primary focus:!border-primary !text-sm text-gray-700"
                 className="w-full"
                 panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
                 itemTemplate={(item) => (
-                  <div className="px-3 py-2 hover:bg-gray-100 text-sm">{item}</div>
+                  <div className="px-3 py-2 hover:bg-gray-100 text-sm">
+                    {item}
+                  </div>
                 )}
               />
             </div>
@@ -415,7 +423,7 @@ function HospitalsFacilities({ loader }) {
 
   useEffect(() => {
     loader(true);
-    Api("GET", "/auth/USER?page=" + currentPage + "&limit=" + limit)
+    Api("GET", "/auth/HOSPITAL?page=" + currentPage + "&limit=" + limit)
       .then((response) => {
         if (response.status) {
           setFacilities(response.data);
@@ -489,6 +497,12 @@ function HospitalsFacilities({ loader }) {
             field="address"
             header="Address"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span>
+                {rowData.billing_Address.address}, {rowData.billing_Address.city}, {rowData.billing_Address.state}{" "}
+                {rowData.billing_Address.zipcode}
+              </span>
+            )}
           />
           <Column
             field="primaryContact"
@@ -504,20 +518,14 @@ function HospitalsFacilities({ loader }) {
             field="assignedRoute"
             header="Assigned Route"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
-            body={(rowData) => (
-              <span>
-                {rowData.assignedRoute || "N/A"}
-              </span>
-            )}
+            body={(rowData) => <span>{rowData.assignedRoute || "N/A"}</span>}
           />
           <Column
             field="deliveryWindow"
             header="Delivery Window"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
-              <span>
-                {rowData.deliveryWindow || "2AM - 6PM"}
-              </span>
+              <span>{rowData.deliveryWindow || "2AM - 6PM"}</span>
             )}
           />
           {/* <Column

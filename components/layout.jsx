@@ -1,17 +1,52 @@
-import React, { useContext, useState } from 'react';
-import { Search, Bell, ChevronDown, Menu, X, Lock } from "lucide-react";
+import React, { useContext, useState } from "react";
+import { Search, Bell, ChevronDown, Menu, X, Lock, User } from "lucide-react";
 import { useRouter } from "next/router";
 import { LogOut } from "lucide-react";
 import Sidebar from "./sidebar";
-import { userContext } from '@/pages/_app';
-import LiveClock from './LiveClock';
+import { userContext } from "@/pages/_app";
+import LiveClock from "./LiveClock";
+import BasicModal from "./modal";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
+import { Popover } from "@mui/material";
+import { Api } from "@/helper/service";
 
 export default function Layout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const router = useRouter();
   const [user, setUser] = useContext(userContext);
-  
+  const [anchorEl, setAnchorEl] = React.useState(null);
+
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+  const id = open ? "simple-popover" : undefined;
+
+  const validationSchema = Yup.object().shape({
+    name: Yup.string().required("Name is required"),
+    email: Yup.string().email("Invalid email").required("Email is required"),
+    role: Yup.string().required("Role is required"),
+  });
+
+  const handleFormSubmit = (values) => {
+    console.log("Form submitted:", values);
+    Api("/auth/send-invitation", values)
+      .then((response) => {
+        console.log("Invitation sent:", response);
+      })
+      .catch((error) => {
+        console.error("Error sending invitation:", error);
+      });
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -30,7 +65,7 @@ export default function Layout({ children, title }) {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      
+
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -54,7 +89,7 @@ export default function Layout({ children, title }) {
 
             <div className="flex items-center space-x-4">
               {/* Search */}
-                <LiveClock />
+              <LiveClock />
 
               <div className="relative hidden sm:block">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -71,7 +106,11 @@ export default function Layout({ children, title }) {
               </button>
 
               {/* Notifications */}
-              <button className="relative p-2 text-gray-400 hover:text-gray-600">
+              <button
+                aria-describedby={id}
+                onClick={handleClick}
+                className="relative p-2 text-gray-400 hover:text-gray-600"
+              >
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
@@ -91,15 +130,15 @@ export default function Layout({ children, title }) {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
                     <ul className="py-1">
                       <li
-                        // onClick={() => {
-                        //   router.push("/change-password");
-                        // }}
+                        onClick={() => {
+                          setModalOpen(true);
+                        }}
                         className="px-4 py-2 text-primary hover:bg-gray-100 cursor-pointer text-sm
                       transition-colors"
                       >
-                        <Lock className="inline-block mr-2 w-4 h-4" />
+                        <User className="inline-block mr-2 w-4 h-4" />
                         Add User
-                      </li> 
+                      </li>
                       <li
                         onClick={() => {
                           router.push("/change-password");
@@ -109,7 +148,7 @@ export default function Layout({ children, title }) {
                       >
                         <Lock className="inline-block mr-2 w-4 h-4" />
                         Change Password
-                      </li> 
+                      </li>
                       <li
                         onClick={() => {
                           localStorage.removeItem("token");
@@ -129,7 +168,172 @@ export default function Layout({ children, title }) {
             </div>
           </div>
         </header>
-        
+        <Popover
+          id={id}
+          open={open}
+          anchorEl={anchorEl}
+          onClose={handleClose}
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "left",
+          }}
+        >
+          <div className="flex flex-col gap-3 rounded-sm">
+            {[1, 2, 3, 4].map((item, index) => (
+              <div key={index} className="relative border-b border-gray-200">
+                {/* <button
+                  onclick="return this.parentNode.remove()"
+                  className="absolute p-1 bg-gray-100 border border-gray-300 rounded-full -top-1 -right-1"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-3 h-3"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button> */}
+                <div className="flex items-center p-4">
+                  {/* <img
+                    className="object-cover w-12 h-12 rounded-lg"
+                    src="https://randomuser.me/api/portraits/women/71.jpg"
+                    alt=""
+                  /> */}
+                  <div className="ml-3 overflow-hidden">
+                    <p className="text-sm font-medium text-gray-900">New Order Placed</p>
+                    <p className="max-w-xs text-xs text-gray-500 truncate">
+                      Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+                      Eveniet, laborum?
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Popover>
+        <BasicModal open={modalOpen} setOpen={setModalOpen}>
+          <div className="min-w-xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-[#003C72]">
+                Invite User To B-Way
+              </h2>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <Formik
+              initialValues={{
+                name: "",
+                email: "",
+                role: "",
+              }}
+              validationSchema={validationSchema}
+              onSubmit={handleFormSubmit}
+              enableReinitialize={true}
+            >
+              {({ isSubmitting, touched, errors, setFieldValue, values }) => (
+                <Form className="pt-6   space-y-6">
+                  {/* Route Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      User Name *
+                    </label>
+                    <Field
+                      type="text"
+                      name="routeName"
+                      placeholder="Enter user name"
+                      className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                        touched.routeName && errors.routeName
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                    />
+                    <ErrorMessage
+                      name="routeName"
+                      component="div"
+                      className="text-red-500 text-sm mt-1"
+                    />
+                  </div>{" "}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      User Email *
+                    </label>
+                    <Field
+                      type="email"
+                      name="userEmail"
+                      placeholder="Enter user email"
+                      className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                        touched.userEmail && errors.userEmail
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                    />
+                    <ErrorMessage
+                      name="routeName"
+                      component="div"
+                      className="text-red-500 text-sm mt-1"
+                    />
+                  </div>
+                  {/* Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Role *
+                    </label>
+                    <Field
+                      as="select"
+                      name="role"
+                      className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
+                        touched.role && errors.role
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                    >
+                      <option value="">Select Role</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="CLIENT">Client</option>
+                      <option value="HOSPITAL">Hospital</option>
+                    </Field>
+                    <ErrorMessage
+                      name="role"
+                      component="div"
+                      className="text-red-500 text-xs mt-1"
+                    />
+                  </div>
+                  {/* Submit Button */}
+                  <div className="flex justify-end pt-6 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setModalOpen(false)}
+                      className="bg-gray-500 text-white px-6 py-2 rounded-md font-medium hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="bg-secondary text-white px-6 py-2 rounded-md font-medium hover:secondary focus:outline-none focus:ring-2 focus:secondary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? "Submitting..." : "Send Invite"}
+                    </button>
+                  </div>
+                </Form>
+              )}
+            </Formik>
+          </div>
+        </BasicModal>
+
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>

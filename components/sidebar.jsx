@@ -105,11 +105,11 @@ const Sidebar = () => {
       href: "/support",
       role: ["HOSPITAL"],
     },
-    {
-      icon: "/images/s6.png",
-      label: "Fate Tracking/ Custody factory",
-      role: ["ADMIN"],
-    },
+    // {
+    //   icon: "/images/s6.png",
+    //   label: "Fate Tracking/ Custody factory",
+    //   role: ["ADMIN"],
+    // },
     {
       icon: "/images/s7.png",
       label: "Settings",

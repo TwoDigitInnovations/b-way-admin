@@ -268,7 +268,7 @@ export default function Operational({
           )}
 
           {/* Recent Orders Table */}
-          {user.role === "CLIENT" ? (
+          {(user?.role === "CLIENT" || user?.role === "HOSPITAL") ? (
             <div className={`col-span-${user?.role === "ADMIN" ? "4" : "5"}`}>
               <div className="bg-white rounded-lg border border-gray-200">
                 <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">

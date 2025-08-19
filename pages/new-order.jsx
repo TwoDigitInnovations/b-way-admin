@@ -68,6 +68,7 @@ export default function NewOrder({ loader, user }) {
       itemId: selectedCurrentItem._id,
       name: selectedCurrentItem.name,
       qty: parseInt(currentQty),
+      price: Number(selectedCurrentItem.price),
       pickupLocation: selectedCurrentItem.pickupLocation,
       stock: selectedCurrentItem.stock,
     };
@@ -109,6 +110,7 @@ export default function NewOrder({ loader, user }) {
       items: selectedItems.map((item) => ({
         itemId: item.itemId,
         qty: item.qty,
+        price: item.price,
         pickupLocation: item.pickupLocation.address,
         pickupCity: item.pickupLocation.city,
         pickupState: item.pickupLocation.state,

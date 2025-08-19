@@ -10,6 +10,7 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { Popover } from "@mui/material";
 import { Api } from "@/helper/service";
+import toast from "react-hot-toast";
 
 export default function Layout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -36,15 +37,20 @@ export default function Layout({ children, title }) {
     role: Yup.string().required("Role is required"),
   });
 
-  const handleFormSubmit = (values) => {
-    console.log("Form submitted:", values);
-    Api("/auth/send-invitation", values)
-      .then((response) => {
-        console.log("Invitation sent:", response);
-      })
-      .catch((error) => {
-        console.error("Error sending invitation:", error);
-      });
+  const handleFormSubmit = async (values, { setSubmitting, resetForm }) => {
+    try {
+      console.log("Form submitted:", values);
+      const response = await Api("post", "/auth/send-invitation", values);
+      console.log("Invitation sent:", response);
+      toast.success("Invitation sent successfully!");
+      resetForm();
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Error sending invitation:", error);
+      toast.error("Failed to send invitation. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -243,7 +249,7 @@ export default function Layout({ children, title }) {
               enableReinitialize={true}
             >
               {({ isSubmitting, touched, errors, setFieldValue, values }) => (
-                <Form className="pt-6   space-y-6">
+                <Form className="pt-6 space-y-6">
                   {/* Route Name */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -251,16 +257,16 @@ export default function Layout({ children, title }) {
                     </label>
                     <Field
                       type="text"
-                      name="routeName"
+                      name="name"
                       placeholder="Enter user name"
                       className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                        touched.routeName && errors.routeName
+                        touched.name && errors.name
                           ? "border-red-500"
                           : "border-gray-300"
                       }`}
                     />
                     <ErrorMessage
-                      name="routeName"
+                      name="name"
                       component="div"
                       className="text-red-500 text-sm mt-1"
                     />
@@ -271,16 +277,16 @@ export default function Layout({ children, title }) {
                     </label>
                     <Field
                       type="email"
-                      name="userEmail"
+                      name="email"
                       placeholder="Enter user email"
                       className={`w-full px-3 py-2 border rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 ${
-                        touched.userEmail && errors.userEmail
+                        touched.email && errors.email
                           ? "border-red-500"
                           : "border-gray-300"
                       }`}
                     />
                     <ErrorMessage
-                      name="routeName"
+                      name="email"
                       component="div"
                       className="text-red-500 text-sm mt-1"
                     />

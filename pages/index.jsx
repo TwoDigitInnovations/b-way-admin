@@ -34,46 +34,51 @@ export default function BWayLoginPage({ loader }) {
     rememberMe: false,
   };
 
-  const handleSubmit = (values, { setSubmitting }) => {
+  const handleSubmit = async (values, { setSubmitting }) => {
     const { email, password, rememberMe } = values;
-    
-    // Show loader
     loader(true);
 
-    Api("POST", "/auth/login", { email, password, rememberMe }, router)
-      .then((res) => {
-        if (res?.status) {
-          localStorage.setItem("token", res.data.token);
-          Cookies.set("token", res.data.token);
-          localStorage.setItem("userDetail", JSON.stringify(res.data.user));
-          setUser(res.data.user); // Update user context
-          // router.push(res.data.user?.role === "ADMIN" ? "/dashboard" : "/dashboard");
-          router.push("/dashboard")
-          toast.success("Login successful!");
-          console.log("Login successful:", res);
-        }
-      })
-      .catch((err) => {
-        console.error("Login error:", err);
-        toast.error(err?.message || "Login failed. Please try again.");
-      })
-      .finally(() => {
+    try {
+      const res = await Api(
+        "POST",
+        "/auth/login",
+        { email, password, rememberMe },
+        router
+      );
+
+      if (res?.status) {
+        localStorage.setItem("token", res.data.token);
+        Cookies.set("token", res.data.token);
+        localStorage.setItem("userDetail", JSON.stringify(res.data.user));
+
+        setUser(res.data.user);
+
+        toast.success("Login successful!");
+        console.log("Login successful:", res);
+
         loader(false);
         setSubmitting(false);
-      });
+
+        setTimeout(async () => {
+          await router.replace("/dashboard");
+        }, 100);
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      toast.error(err?.message || "Login failed. Please try again.");
+      loader(false);
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Login Form */}
       <div className="flex-1 lg:flex-[0.8] flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-md w-full space-y-6">
-          {/* Logo - Centered */}
           <div className="flex items-center justify-center">
             <Image src="/images/Logo.png" width={180} height={180} alt="img" />
           </div>
 
-          {/* Sign In Form */}
           <div className="mt-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center lg:text-left">
               Sign in

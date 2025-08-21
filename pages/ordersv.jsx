@@ -32,6 +32,7 @@ import { fetchRoutes } from "@/store/routeSlice";
 import { AutoComplete } from "primereact/autocomplete";
 import { getStateAndCityPicklist } from "@/utils/states";
 import { fetchItems } from "@/store/itemSlice";
+import { useSocket } from "@/contexts/SocketContext";
 
 function Orders({ loader, user }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -56,6 +57,7 @@ function Orders({ loader, user }) {
   const dispatch = useDispatch();
   const router = useRouter();
   const { items } = useSelector((state) => state.item);
+  const { isConnected, orders: realtimeOrders } = useSocket();
 
   const statesAndCities = getStateAndCityPicklist();
   const allCities = Object.values(statesAndCities).flat();
@@ -461,6 +463,10 @@ function Orders({ loader, user }) {
     );
     setFilteredItems(_filteredItems);
   };
+
+  // const ordersData = useMemo(() => {
+  // const realt
+  // }, [isConnected, realtimeOrders]);
 
   return (
     <Layout title="Orders">

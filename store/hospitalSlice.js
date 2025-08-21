@@ -4,7 +4,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 export const fetchHospital = createAsyncThunk(
   "hospital/fetchHospital",
   async () => {
-    const response = await Api("GET", "/auth/HOSPITAL", null, null);
+    const response = await Api("GET", "/auth/all/HOSPITAL", null, null);
     return response.data;
   }
 );

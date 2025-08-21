@@ -9,6 +9,8 @@ import "primereact/resources/themes/lara-light-cyan/theme.css";
 import "leaflet/dist/leaflet.css";
 import { Provider } from "react-redux";
 import { store } from "@/store";
+import { SocketProvider } from "@/contexts/SocketContext";
+import RealtimeNotifications from "@/components/RealtimeNotifications";
 
 export const userContext = createContext();
 export const openCartContext = createContext();
@@ -21,11 +23,10 @@ function App({ Component, pageProps }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (router.route === "/") {
-      router.replace("/");
+    if (router.route !== "/") {
+      getUserdetail();
     }
-    getUserdetail();
-  }, [router]);
+  }, [router.route]);
 
   const getUserdetail = () => {
     const user = localStorage.getItem("userDetail");
@@ -44,16 +45,19 @@ function App({ Component, pageProps }) {
   return (
     <Provider store={store}>
       <PrimeReactProvider>
-        <Toaster position="top-right" reverseOrder={false} />
-        <userContext.Provider value={[user, setUser]}>
-          {open && <Loader open={open} />}
-          <Component
-            toaster={(t) => toast(t.message)}
-            {...pageProps}
-            loader={setOpen}
-            user={user}
-          />
-        </userContext.Provider>
+        <SocketProvider>
+          <Toaster position="top-right" reverseOrder={false} />
+          <RealtimeNotifications />
+          <userContext.Provider value={[user, setUser]}>
+            {open && <Loader open={open} />}
+            <Component
+              toaster={(t) => toast(t.message)}
+              {...pageProps}
+              loader={setOpen}
+              user={user}
+            />
+          </userContext.Provider>
+        </SocketProvider>
       </PrimeReactProvider>
     </Provider>
   );

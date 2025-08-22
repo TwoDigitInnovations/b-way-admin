@@ -100,7 +100,16 @@ function Dashboard({ user }) {
     const filteredRecentOrders = recentOrders.filter(
       (order) => !realtimeOrderIds.has(order._id)
     );
-    const combined = [...realtimeOrders, ...filteredRecentOrders];
+    
+    const indexedRealtimeOrders = realtimeOrders.map((order, index) => ({
+      ...order,
+      no: index + 1,
+      facilityName: order.facilityName || order.user?.name || 'N/A',
+      route: typeof order.route === 'string' ? order.route : (order.route?.routeName || 'N/A'),
+      items: typeof order.items === 'string' ? order.items : (order.items?.name || 'N/A')
+    }));
+    
+    const combined = [...indexedRealtimeOrders, ...filteredRecentOrders];
 
     console.log("Combined orders result:", {
       combinedCount: combined.length,

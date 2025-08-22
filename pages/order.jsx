@@ -71,13 +71,28 @@ function Orders() {
 
   useEffect(() => {
     fetchOrders(currentPage);
-  }, [currentPage]);
+  }, [currentPage, realtimeOrders]);
 
-  // Merge real-time orders with API orders, prioritizing real-time data
   const mergedOrders = React.useMemo(() => {
-    const realtimeOrderIds = new Set(realtimeOrders.map(order => order._id));
-    const filteredApiOrders = apiOrders.filter(order => !realtimeOrderIds.has(order._id));
-    return [...realtimeOrders, ...filteredApiOrders];
+   console.log("Combining orders:", {
+      realtimeOrdersCount: realtimeOrders.length,
+      apiOrdersCount: apiOrders.length,
+      realtimeOrders: realtimeOrders,
+      apiOrders: apiOrders,
+    });
+
+    const realtimeOrderIds = new Set(realtimeOrders.map((order) => order._id));
+    const filteredRecentOrders = apiOrders.filter(
+      (order) => !realtimeOrderIds.has(order._id)
+    );
+    const combined = [...realtimeOrders, ...filteredRecentOrders];
+
+    console.log("Combined orders result:", {
+      combinedCount: combined.length,
+      finalOrders: combined,
+    });
+
+    return combined.slice(0, 6);
   }, [realtimeOrders, apiOrders]);
 
   const toggleDropdown = (index) => {
@@ -99,6 +114,8 @@ function Orders() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  const orders = mergedOrders;
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -106,7 +123,6 @@ function Orders() {
         <Sidebar />
       </div>
       
-      {/* Sidebar Overlay for mobile */}
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 bg-opacity-50 z-40 lg:hidden"
@@ -114,30 +130,11 @@ function Orders() {
         />
       )}
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 w-full lg:w-auto">
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} title="Orders" />
-        
         <div className="p-3 sm:p-4 lg:p-6">
-          {/* Connection Status and Real-time Indicator */}
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
-                isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                {isConnected ? (
-                  <>
-                    <Wifi className="w-4 h-4" />
-                    <span>Real-time Connected</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="w-4 h-4" />
-                    <span>Disconnected</span>
-                  </>
-                )}
-              </div>
-              
               {realtimeOrders.length > 0 && (
                 <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
                   {realtimeOrders.length} live order{realtimeOrders.length !== 1 ? 's' : ''}
@@ -162,7 +159,6 @@ function Orders() {
               </div>
             ) : (
               <>
-                {/* Table with Horizontal Scroll for All Screen Sizes */}
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[800px]">
                     <thead className="bg-[#003C72] text-white">
@@ -246,7 +242,6 @@ function Orders() {
                   </table>
                 </div>
 
-                {/* Pagination */}
                 <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
                   <div className="text-sm text-gray-700">
                     Showing {((currentPage - 1) * 10) + 1} to {Math.min(currentPage * 10, totalOrders)} of {totalOrders} results

@@ -125,17 +125,47 @@ export const SocketProvider = ({ children }) => {
     socketInstance.on('new_order', (data) => {
       console.log('New order received:', data);
       
+      // Transform real-time order data to match the format expected by the UI
+      const transformedOrder = {
+        _id: data.order._id,
+        orderId: data.order.orderId,
+        facilityName: data.order.facilityName || data.order.hospitalName || 'N/A',
+        items: {
+          name: data.order.items || 'N/A'
+        },
+        qty: data.order.qty,
+        status: data.order.status,
+        assignedDriver: data.order.assignedDriver || 'Unassigned',
+        route: data.order.route ? { routeName: data.order.route } : null,
+        eta: data.order.eta || 'N/A',
+        createdAt: data.order.createdAt || new Date().toISOString(),
+        pickupLocation: data.order.pickupLocation,
+        deliveryLocation: data.order.deliveryLocation,
+        user: {
+          _id: data.order.user,
+          name: data.order.facilityName || data.order.hospitalName || 'N/A'
+        },
+        // Add index - will be set dynamically in the orders page
+        index: 0
+      };
+      
       setOrders(prevOrders => {
         console.log('Adding new order to state. Previous count:', prevOrders.length);
-        const newOrders = [data.order, ...prevOrders];
+        const newOrders = [transformedOrder, ...prevOrders];
         console.log('New orders count:', newOrders.length);
         return newOrders;
       });
       
-      toast.success(`New order ${data.order.orderId} created`, {
-        duration: 4000,
-        position: 'top-right',
-      });
+      // toast.success(`📦 New order ${data.order.orderId} created`, {
+      //   duration: 4000,
+      //   position: 'top-right',
+      //   style: {
+      //     background: '#3B82F6',
+      //     color: 'white',
+      //     fontWeight: 'bold',
+      //   },
+      //   icon: '📦',
+      // });
     });
 
     socketInstance.on('order_status_update', (data) => {
@@ -144,32 +174,121 @@ export const SocketProvider = ({ children }) => {
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order._id === data.order._id 
-            ? { ...order, status: data.order.status }
+            ? { 
+                ...order, 
+                status: data.order.status,
+                facilityName: data.order.user?.name || order.facilityName || order.user?.name,
+                items: {
+                  ...order.items,
+                  name: data.order.items?.name || order.items?.name
+                },
+                route: data.order.route ? {
+                  ...order.route,
+                  routeName: data.order.route?.routeName || data.order.route
+                } : order.route,
+                assignedDriver: data.order.assignedDriver || order.assignedDriver,
+                eta: data.order.eta || order.eta,
+                user: {
+                  ...order.user,
+                  name: data.order.user?.name || order.user?.name
+                }
+              }
             : order
         )
       );
       
-      toast.info(`Order ${data.order.orderId} status: ${data.order.status}`, {
-        duration: 4000,
+      // toast.info(`📋 Order ${data.order.orderId} status: ${data.order.status}`, {
+      //   duration: 4000,
+      //   position: 'top-right',
+      //   style: {
+      //     background: '#6366F1',
+      //     color: 'white',
+      //   },
+      //   icon: '📋',
+      // });
+    });
+
+    socketInstance.on('route_assigned', (data) => {
+      console.log('Route assignment received:', data);
+      console.log('Route data:', data.route);
+      console.log('Order data:', data.order);
+
+      setOrders(prevOrders => {
+        const updatedOrders = prevOrders.map(order => 
+          order._id === data.order._id 
+            ? { 
+                ...order, 
+                route: {
+                  routeName: data.route?.routeName || data.route || 'Assigned'
+                },
+                facilityName: data.order.user?.name || order.facilityName || order.user?.name,
+                items: {
+                  ...order.items,
+                  name: data.order.items?.name || order.items?.name
+                },
+                assignedDriver: data.order.assignedDriver || order.assignedDriver,
+                eta: data.order.eta || order.eta,
+                status: data.order.status || order.status,
+                user: {
+                  ...order.user,
+                  name: data.order.user?.name || order.user?.name
+                }
+              }
+            : order
+        );
+        console.log('Updated orders after route assignment:', updatedOrders);
+        return updatedOrders;
+      });
+      
+      const routeName = data.route?.routeName || data.route || 'Route';
+      toast.success(`🚛 Route "${routeName}" assigned to order ${data.order.orderId}`, {
+        duration: 6000,
         position: 'top-right',
+        style: {
+          background: '#059669',
+          color: 'white',
+          fontWeight: 'bold',
+          border: '2px solid #10B981',
+        },
+        icon: '🚛',
       });
     });
 
     socketInstance.on('route_assigned', (data) => {
       console.log('Route assignment received:', data);
+      console.log('Route data:', data.route);
+      console.log('Order data:', data.order);
 
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
+      setOrders(prevOrders => {
+        const updatedOrders = prevOrders.map(order => 
           order._id === data.order._id 
-            ? { ...order, route: data.route }
+            ? { 
+                ...order, 
+                route: data.route?.routeName || data.route || 'Assigned',
+                facilityName: data.order.user?.name || order.facilityName,
+                items: data.order.items?.name || order.items,
+                assignedDriver: data.order.assignedDriver || order.assignedDriver,
+                eta: data.order.eta || order.eta,
+                status: data.order.status || order.status
+              }
             : order
-        )
-      );
-      
-      toast.success(`Route ${data.route.routeName} assigned to order ${data.order.orderId}`, {
-        duration: 4000,
-        position: 'top-right',
+        );
+        console.log('Updated orders after route assignment:', updatedOrders);
+        return updatedOrders;
       });
+      
+      const routeName = data.route?.routeName || data.route || 'Route';
+      // toast.success(`🚛 Route "${routeName}" assigned to order ${data.order.orderId}`, {
+      //   duration: 6000,
+      //   position: 'top-right',
+      //   style: {
+      //     background: '#059669',
+      //     color: 'white',
+      //     fontWeight: 'bold',
+      //     border: '2px solid #10B981',
+      //   },
+      //   icon: '🚛',
+      // });
     });
 
     return () => {

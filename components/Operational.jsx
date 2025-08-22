@@ -29,13 +29,13 @@ export default function Operational({
 
   const getStatusStyle = (status) => {
     const statusStyles = {
-      Active: "bg-green-100 text-green-800 border border-green-200",
-      Inactive: "bg-red-100 text-red-800 border border-red-200",
-      Pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
-      Completed: "bg-blue-100 text-blue-800 border border-blue-200",
-      Cancelled: "bg-gray-100 text-gray-800 border border-gray-200",
-      Flagged: "bg-orange-100 text-secondary border border-orange-200",
-      Hold: "bg-purple-100 text-purple-800 border border-purple-200",
+      Cancelled: "bg-red-100 text-red-800 border border-red-200",
+      Delivered: "bg-green-100 text-green-800 border border-green-200",
+      "Picked Up": "bg-blue-100 text-blue-800 border border-blue-200",
+      Scheduled: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+      "Return Created": "bg-teal-100 text-teal-800 border border-teal-200",
+      "Invoice Generated": "bg-green-100 text-green-800  border-green-800",
+      Pending: "bg-gray-100 text-gray-800 border border-gray-200",
     };
 
     return (

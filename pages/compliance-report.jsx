@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, act } from "react";
 import {
   MoreHorizontal,
   Eye,
@@ -46,7 +46,7 @@ import Typography from "@mui/material/Typography";
 
 const steps = [
   "Basic Information",
-  "Audit Data", 
+  "Audit Data",
   "HIPAA Compliance",
   "Cold Chain Monitoring",
   "Chain of Custody",
@@ -140,30 +140,10 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   const [activeStep, setActiveStep] = React.useState(0);
   const [completed, setCompleted] = React.useState({});
 
-  const totalSteps = () => {
-    return steps.length;
-  };
-
-  const completedSteps = () => {
-    return Object.keys(completed).length;
-  };
-
-  const isLastStep = () => {
-    return activeStep === totalSteps() - 1;
-  };
-
-  const allStepsCompleted = () => {
-    return completedSteps() === totalSteps();
-  };
-
   const handleNext = () => {
-    const newActiveStep =
-      isLastStep() && !allStepsCompleted()
-        ? // It's the last step, but not all steps have been completed,
-          // find the first step that has been completed
-          steps.findIndex((step, i) => !(i in completed))
-        : activeStep + 1;
-    setActiveStep(newActiveStep);
+    if (activeStep < steps.length - 1) {
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    }
   };
 
   const handleBack = () => {
@@ -241,7 +221,7 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
         },
       });
     }
-    
+
     // Reset stepper when modal opens
     if (isOpen) {
       setActiveStep(0);
@@ -273,12 +253,11 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
     onClose();
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-    setActiveStep(0);
-    setCompleted({});
-    onClose();
+  const handleSubmit = () => {
+      onSubmit(formData);
+      setActiveStep(0);
+      setCompleted({});
+      onClose();
   };
 
   if (!isOpen) return null;
@@ -288,108 +267,90 @@ function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
       visible={isOpen}
       onHide={handleModalClose}
       style={{ width: "90vw", maxWidth: "1200px" }}
+      draggable={false}
       header={
-    <div>
-      <div className="text-lg font-semibold mb-3">
-        {mode === "add" ? "Create Compliance Report" : "Edit Compliance Report"}
-      </div>
-      <Stepper nonLinear activeStep={activeStep}>
-        {steps.map((label, index) => (
-          <Step key={label} completed={completed[index]}>
-            <StepButton color="inherit" onClick={handleStep(index)}>
-              {label}
-            </StepButton>
-          </Step>
-        ))}
-      </Stepper>
-    </div>
-  }
+        <div>
+          <div className="text-lg font-semibold mb-3">
+            {mode === "add"
+              ? "Create Compliance Report"
+              : "Edit Compliance Report"}
+            {activeStep < steps.length && (
+              <span className="text-sm font-normal text-gray-600 ml-2">
+                - {steps[activeStep]}
+              </span>
+            )}
+          </div>
+          <Stepper nonLinear activeStep={activeStep}>
+            {steps.map((label, index) => (
+              <Step key={label} completed={completed[index]}>
+                <StepButton color="inherit" onClick={handleStep(index)}>
+                  {label}
+                </StepButton>
+              </Step>
+            ))}
+          </Stepper>
+        </div>
+      }
       modal
       className="p-fluid"
     >
       <Box sx={{ width: "100%" }}>
-       
         <div>
-          {allStepsCompleted() ? (
-            <React.Fragment>
-              <Typography sx={{ mt: 2, mb: 1 }}>
-                All steps completed - you&apos;re finished
-              </Typography>
-              <Box sx={{ display: "flex", flexDirection: "row", pt: 2 }}>
-                <Box sx={{ flex: "1 1 auto" }} />
-                <Button onClick={handleReset}>Reset</Button>
-              </Box>
-            </React.Fragment>
-          ) : (
-            <React.Fragment>
-              <form onSubmit={handleSubmit}>
-                {activeStep === 0 ? (
-                  <Step0Content
-                    formData={formData}
-                    handleInputChange={handleInputChange}
-                    statusOptions={statusOptions}
-                    regulationOptions={regulationOptions}
-                    complianceCategoryOptions={complianceCategoryOptions}
-                  />
-                ) : activeStep === 1 ? (
-                  <Step1Content
-                    formData={formData}
-                    handleInputChange={handleInputChange}
-                  />
-                ) : activeStep === 2 ? (
-                  <Step2Content
-                    formData={formData}
-                    handleInputChange={handleInputChange}
-                  />
-                ) : activeStep === 3 ? (
-                  <Step3Content
-                    formData={formData}
-                    handleInputChange={handleInputChange}
-                  />
-                ) : activeStep === 4 ? (
-                  <Step4Content
-                    formData={formData}
-                    handleInputChange={handleInputChange}
-                  />
-                ) : null}
-                <div className="flex gap-2 justify-between space-x-2 mt-4">
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      label="Back"
-                      icon="pi pi-arrow-left"
-                      disabled={activeStep === 0}
-                      className="p-button-secondary"
-                      onClick={handleBack}
-                    />
-                    <Button
-                      type="button"
-                      label="Cancel"
-                      icon="pi pi-times"
-                      className="p-button-secondary"
-                      onClick={handleModalClose}
-                    />
-                  </div>
-                  {activeStep === steps.length - 1 ? (
-                    <Button
-                      type="submit"
-                      label={mode === "add" ? "Create Report" : "Update Report"}
-                      icon="pi pi-check"
-                      className="p-button-primary"
-                    />
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={handleNext}
-                      label="Next"
-                      icon="pi pi-arrow-right"
-                      className="p-button-primary"
-                    />
-                  )}
-                </div>
-              </form>
-            </React.Fragment>
-          )}
+          {activeStep === 0 ? (
+            <Step0Content
+              formData={formData}
+              handleInputChange={handleInputChange}
+              statusOptions={statusOptions}
+              regulationOptions={regulationOptions}
+              complianceCategoryOptions={complianceCategoryOptions}
+            />
+          ) : activeStep === 1 ? (
+            <Step1Content
+              formData={formData}
+              handleInputChange={handleInputChange}
+            />
+          ) : activeStep === 2 ? (
+            <Step2Content
+              formData={formData}
+              handleInputChange={handleInputChange}
+            />
+          ) : activeStep === 3 ? (
+            <Step3Content
+              formData={formData}
+              handleInputChange={handleInputChange}
+            />
+          ) : activeStep === 4 ? (
+            <Step4Content
+              formData={formData}
+              handleInputChange={handleInputChange}
+            />
+          ) : null}
+          <div className="flex gap-2 justify-between space-x-2 mt-4">
+            <Button
+              type="button"
+              label="Back"
+              icon="pi pi-arrow-left"
+              disabled={activeStep === 0}
+              className="p-button-secondary"
+              onClick={handleBack}
+            />
+            {activeStep === steps.length - 1 ? (
+              <Button
+                onClick={handleSubmit}
+                label={mode === "add" ? "Create Report" : "Update Report"}
+                icon="pi pi-check"
+                className="p-button-primary"
+              />
+            ) : (
+              <Button
+                type="button"
+                onClick={handleNext}
+                label="Next"
+                icon="pi pi-arrow-right"
+                className="p-button-primary"
+              />
+            )}
+          </div>
         </div>
       </Box>
     </Dialog>
@@ -527,12 +488,16 @@ function Compliances({ loader }) {
 
       if (response.data) {
         // Ensure we're setting an array for the DataTable
-        const reportsData = Array.isArray(response.data) 
-          ? response.data 
-          : (response.data.reports || response.data.data || []);
-        
+        const reportsData = Array.isArray(response.data)
+          ? response.data
+          : response.data.reports || response.data.data || [];
+
         setComplianceData(reportsData);
-        setTotalRecords(response.data.totalReports || response.data.total || reportsData.length);
+        setTotalRecords(
+          response.data.totalReports ||
+            response.data.total ||
+            reportsData.length
+        );
       }
     } catch (error) {
       console.error("Error loading compliance reports:", error);
@@ -997,7 +962,11 @@ function Step0Content({
           Regulation Types
         </label>
         <MultiSelect
-          value={Array.isArray(formData.regulationType) ? formData.regulationType : []}
+          value={
+            Array.isArray(formData.regulationType)
+              ? formData.regulationType
+              : []
+          }
           options={regulationOptions}
           onChange={(e) => handleInputChange("regulationType", e.value || [])}
           placeholder="Select Regulations"
@@ -1010,9 +979,15 @@ function Step0Content({
           Compliance Categories
         </label>
         <MultiSelect
-          value={Array.isArray(formData.complianceCategories) ? formData.complianceCategories : []}
+          value={
+            Array.isArray(formData.complianceCategories)
+              ? formData.complianceCategories
+              : []
+          }
           options={complianceCategoryOptions}
-          onChange={(e) => handleInputChange("complianceCategories", e.value || [])}
+          onChange={(e) =>
+            handleInputChange("complianceCategories", e.value || [])
+          }
           placeholder="Select Categories"
           display="chip"
         />

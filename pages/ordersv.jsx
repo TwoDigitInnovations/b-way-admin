@@ -464,9 +464,42 @@ function Orders({ loader, user }) {
     setFilteredItems(_filteredItems);
   };
 
-  // const ordersData = useMemo(() => {
-  // const realt
-  // }, [isConnected, realtimeOrders]);
+  const displayOrders = React.useMemo(() => {
+    console.log("Combining orders:", {
+      realtimeOrdersCount: realtimeOrders.length,
+      ordersCount: orders.length,
+      realtimeOrders: realtimeOrders,
+      orders: orders,
+    });
+
+    const realtimeOrderIds = new Set(realtimeOrders.map((order) => order._id));
+    const filteredRecentOrders = orders.filter(
+      (order) => !realtimeOrderIds.has(order._id)
+    );
+    
+    // Add index to real-time orders
+    const indexedRealtimeOrders = realtimeOrders.map((order, index) => ({
+      ...order,
+      index: index + 1
+    }));
+    
+    // Adjust index for API orders to continue from real-time orders
+    const indexedApiOrders = filteredRecentOrders.map((order, index) => ({
+      ...order,
+      index: realtimeOrders.length + index + 1
+    }));
+    
+    const combined = [...indexedRealtimeOrders, ...indexedApiOrders];
+
+    console.log("Combined orders result:", {
+      combinedCount: combined.length,
+      finalOrders: combined.slice(0, limit),
+    });
+
+    return combined.slice(0, limit);
+  }, [realtimeOrders, orders, limit]);
+
+   const ordersData = displayOrders;
 
   return (
     <Layout title="Orders">
@@ -480,7 +513,7 @@ function Orders({ loader, user }) {
           </button> */}
         </div>
         <DataTable
-          value={orders}
+          value={ordersData}
           stripedRows
           tableStyle={{ minWidth: "50rem" }}
           rowClassName={() => "hover:bg-gray-50"}
@@ -496,6 +529,11 @@ function Orders({ loader, user }) {
             field="index"
             header="No."
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span className="text-gray-600">
+                {rowData.index || 'N/A'}
+              </span>
+            )}
           />
           <Column
             field="orderId"
@@ -514,7 +552,7 @@ function Orders({ loader, user }) {
               bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
               body={(rowData) => (
                 <span style={{ color: "#374151", fontWeight: 500 }}>
-                  {rowData.user?.name || "N/A"}
+                  {rowData.facilityName || rowData.user?.name || "N/A"}
                 </span>
               )}
             />
@@ -561,7 +599,13 @@ function Orders({ loader, user }) {
             header="Route"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
-              <span>{rowData?.route ? rowData?.route?.routeName : "N/A"}</span>
+              <span>
+                {rowData?.route 
+                  ? (typeof rowData.route === 'string' 
+                      ? rowData.route 
+                      : rowData.route?.routeName || 'Assigned')
+                  : "N/A"}
+              </span>
             )}
           />
           <Column

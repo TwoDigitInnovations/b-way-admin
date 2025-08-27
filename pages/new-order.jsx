@@ -128,7 +128,7 @@ export default function NewOrder({ loader, user }) {
           setCurrentItemInput("");
           setCurrentQty("");
           setSelectedCurrentItem(null);
-          //   router.push("/ordersv");
+          //   router.push("/orders");
         } else {
           toast.error("Failed to create order. Please try again.");
         }
@@ -471,6 +471,10 @@ export default function NewOrder({ loader, user }) {
                     </div>
                   </div>
                 </div> */}
+                
+                <div className="mb-6">
+
+                  </div>
 
                 {/* Submit Button */}
                 <div className="flex flex-wrap justify-between items-center">

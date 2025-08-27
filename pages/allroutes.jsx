@@ -45,6 +45,7 @@ import {
   Box,
 } from "@mui/material";
 import { fetchHospital } from "@/store/hospitalSlice";
+import Dialog from "@/components/Dialog";
 
 // Get states and cities data
 const statesAndCities = getStateAndCityPicklist();
@@ -118,6 +119,17 @@ function RoutesSchedules({ loader }) {
   const loading = useSelector(selectLoading);
   const { drivers, assignedDriver } = useSelector((state) => state.driver);
   const { hospitals } = useSelector((state) => state.hospital);
+
+  // Dialog state
+  const [dialogConfig, setDialogConfig] = useState({
+    open: false,
+    type: "info",
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
 
   const ITEM_HEIGHT = 48;
   const ITEM_PADDING_TOP = 8;
@@ -258,12 +270,6 @@ function RoutesSchedules({ loader }) {
   const handleDeleteRoute = async (routeId) => {
     if (!routeId) return;
 
-    // const confirmDelete = window.confirm(
-    //   "Are you sure you want to delete this route? This action cannot be undone."
-    // );
-
-    // if (!confirmDelete) return;
-
     try {
       loader(true);
       const response = await Api("DELETE", `/route/${routeId}`);
@@ -279,7 +285,26 @@ function RoutesSchedules({ loader }) {
       toast.error(err?.message || "Failed to delete route. Please try again.");
     } finally {
       loader(false);
+      closeDialog();
     }
+  };
+
+  // Dialog helper functions
+  const showDeleteDialog = (route) => {
+    setDialogConfig({
+      open: true,
+      type: "danger",
+      title: "Delete Route",
+      message: `Are you sure you want to delete the route "${route.routeName}"? This action cannot be undone and will affect all assigned orders.`,
+      confirmText: "Delete Route",
+      cancelText: "Cancel",
+      onConfirm: () => handleDeleteRoute(route._id),
+      customIcon: Trash,
+    });
+  };
+
+  const closeDialog = () => {
+    setDialogConfig(prev => ({ ...prev, open: false }));
   };
 
   const toggleDropdown = (index) => {
@@ -345,7 +370,7 @@ function RoutesSchedules({ loader }) {
       icon: <Trash className="w-5 h-5 text-gray-500" />,
       command: () => {
         console.log("Delete clicked", row);
-        handleDeleteRoute(row._id);
+        showDeleteDialog(row);
       },
     },
   ];
@@ -1614,6 +1639,20 @@ function RoutesSchedules({ loader }) {
           </div>
         </div>
       )}
+
+      {/* Dynamic Dialog Component */}
+      <Dialog
+        open={dialogConfig.open}
+        type={dialogConfig.type}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+        onClose={closeDialog}
+        customIcon={dialogConfig.customIcon}
+      />
     </Layout>
   );
 }

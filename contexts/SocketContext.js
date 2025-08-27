@@ -98,7 +98,7 @@ export const SocketProvider = ({ children }) => {
         console.log(' Admin user - should be in admin_room');
       } else if (userData.role === 'CLIENT') {
         console.log(' Client user - should be in client_room');
-      } else if (userData.role === 'USER' || userData.role === 'HOSPITAL') {
+      } else if (userData.role === 'CLINIC' || userData.role === 'HOSPITAL') {
         console.log('Hospital user - should be in hospital_room');
       }
     });

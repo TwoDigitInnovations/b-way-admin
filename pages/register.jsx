@@ -139,8 +139,8 @@ export default function RegisterPage({ loader }) {
         }
       })
       .catch((err) => {
-        console.error("Login error:", err);
-        toast.error(err?.message || "Login failed. Please try again.");
+        console.error("Register error:", err);
+        toast.error(err?.message || "Register failed. Please try again.");
       })
       .finally(() => {
         loader(false);
@@ -156,7 +156,7 @@ export default function RegisterPage({ loader }) {
           message="There was an error processing your registration."
         />
       )}
-      {/* Left Side - Login Form */}
+      {/* Left Side - Register Form */}
       <div className="flex-1 lg:flex-[0.8] flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-md w-full space-y-6">
           {/* Logo - Centered */}
@@ -298,7 +298,7 @@ export default function RegisterPage({ loader }) {
                       </Link>
                     </div>
                   </div> */}
-                  {/* Login Button */}
+                  {/* Register Button */}
                   <button
                     type="submit"
                     disabled={isSubmitting}
@@ -308,7 +308,7 @@ export default function RegisterPage({ loader }) {
                         : "bg-[#FF4B00] cursor-pointer hover:bg-[#e63e00]"
                     } transition-colors duration-200`}
                   >
-                    {isSubmitting ? "Signing in..." : "Login"}
+                    {isSubmitting ? "Signing up..." : "Register"}
                   </button>
                 </form>
               )}

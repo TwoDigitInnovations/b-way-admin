@@ -33,6 +33,8 @@ import { AutoComplete } from "primereact/autocomplete";
 import { getStateAndCityPicklist } from "@/utils/states";
 import { fetchItems } from "@/store/itemSlice";
 import { useSocket } from "@/contexts/SocketContext";
+import Dialog from "@/components/Dialog";
+import { Modal } from "@mui/material";
 
 function Orders({ loader, user }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -40,6 +42,17 @@ function Orders({ loader, user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  
+  // Dialog states
+  const [dialogConfig, setDialogConfig] = useState({
+    open: false,
+    type: "info",
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
   const menuRef = useRef(null);
   const [selectedRowData, setSelectedRowData] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -181,7 +194,7 @@ function Orders({ loader, user }) {
         handleEditClick(order);
       },
     },
-    ...(user.role !== "ADMIN"
+    ...(user.role === "ADMIN"
       ? [
           {
             label: "Assign Route",
@@ -189,22 +202,27 @@ function Orders({ loader, user }) {
             command: () => {
               console.log("Assign clicked", order);
               handleAssign(order);
+            },  
+          },
+        ]
+      : []),
+    ...(user.role === "HOSPITAL" || user.role === "CLINIC"
+      ? [
+          {
+            label: "Create Return",
+            icon: <RotateCcw className="w-5 h-5 text-gray-500" />,
+            command: () => {
+              console.log("Create Return clicked", order);
+              showCreateReturnDialog(order);
             },
           },
         ]
       : []),
     {
-      label: "Create Return",
-      icon: <RotateCcw className="w-5 h-5 text-gray-500" />,
-      command: () => {
-        console.log("Create Return clicked", order);
-      },
-    },
-    {
       label: "Download Return Load",
       icon: <Download className="w-5 h-5 text-gray-500" />,
       command: () => {
-        console.log("Download Return Load clicked", order);
+        handleDownloadReturnLoad(order);
       },
     },
     ...(user.role === "ADMIN"
@@ -214,7 +232,7 @@ function Orders({ loader, user }) {
             icon: <Trash className="w-5 h-5 text-gray-500" />,
             command: () => {
               console.log("Delete clicked", order);
-              handleDeleteOrder(order._id);
+              showDeleteDialog(order);
             },
           },
         ]
@@ -292,7 +310,94 @@ function Orders({ loader, user }) {
       })
       .finally(() => {
         loader(false);
+        closeDialog();
       });
+  };
+
+  // Dialog helper functions
+  const showDeleteDialog = (order) => {
+    setDialogConfig({
+      open: true,
+      type: "danger",
+      title: "Delete Order",
+      message: `Are you sure you want to delete order #${order.orderId || order._id}? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      onConfirm: () => handleDeleteOrder(order._id),
+      customIcon: Trash,
+    });
+  };
+
+  const showCreateReturnDialog = (order) => {
+    setDialogConfig({
+      open: true,
+      type: "warning",
+      title: "Create Return",
+      message: `Are you sure you want to create a return for order #${order.orderId || order._id}? This will initiate the return process.`,
+      confirmText: "Create Return",
+      cancelText: "Cancel",
+      onConfirm: () => handleCreateReturn(order),
+      customIcon: RotateCcw,
+    });
+  };
+
+  const handleCreateReturn = (order) => {
+    loader(true);
+    // Add your return creation logic here
+    Api("PUT", `/order/create-return/${order._id}`, null, router)
+      .then((res) => {
+        if (res.status) {
+          toast.success("Return created successfully.");
+          fetchOrders(); // Refresh the orders list
+        }
+      })
+      .catch((error) => {
+        console.error("Error creating return:", error);
+        toast.error("An error occurred while creating the return.");
+      })
+      .finally(() => {
+        loader(false);
+        closeDialog();
+      });
+  };
+
+  // Additional dialog helper for info messages
+  const showInfoDialog = (title, message, onConfirm = () => {}) => {
+    setDialogConfig({
+      open: true,
+      type: "info",
+      title,
+      message,
+      confirmText: "OK",
+      cancelText: "Cancel",
+      onConfirm: () => {
+        onConfirm();
+        closeDialog();
+      },
+    });
+  };
+
+  // Example usage for download confirmation
+  const handleDownloadReturnLoad = (order) => {
+    setDialogConfig({
+      open: true,
+      type: "info",
+      title: "Download Return Load",
+      message: `Are you sure you want to download the return load for order #${order.orderId || order._id}?`,
+      confirmText: "Download",
+      cancelText: "Cancel",
+      onConfirm: () => {
+        // Add download logic here
+        console.log("Downloading return load for order:", order);
+        toast.success("Download started successfully.");
+        closeDialog();
+      },
+      customIcon: Download,
+    });
+  };
+
+  const closeDialog = () => {
+    setDialogConfig(prev => ({ ...prev, open: false }));
   };
 
   const handleAssign = (order) => {
@@ -346,8 +451,12 @@ function Orders({ loader, user }) {
       loader(true);
     }
     try {
-
-      const response = await Api("GET", `/order?page=${currentPage}&limit=${limit}`, null, router);
+      const response = await Api(
+        "GET",
+        `/order?page=${currentPage}&limit=${limit}`,
+        null,
+        router
+      );
 
       if (response.status) {
         setOrders(response.data);
@@ -476,19 +585,19 @@ function Orders({ loader, user }) {
     const filteredRecentOrders = orders.filter(
       (order) => !realtimeOrderIds.has(order._id)
     );
-    
+
     // Add index to real-time orders
     const indexedRealtimeOrders = realtimeOrders.map((order, index) => ({
       ...order,
-      index: index + 1
+      index: index + 1,
     }));
-    
+
     // Adjust index for API orders to continue from real-time orders
     const indexedApiOrders = filteredRecentOrders.map((order, index) => ({
       ...order,
-      index: realtimeOrders.length + index + 1
+      index: realtimeOrders.length + index + 1,
     }));
-    
+
     const combined = [...indexedRealtimeOrders, ...indexedApiOrders];
 
     console.log("Combined orders result:", {
@@ -499,7 +608,7 @@ function Orders({ loader, user }) {
     return combined.slice(0, limit);
   }, [realtimeOrders, orders, limit]);
 
-   const ordersData = displayOrders;
+  const ordersData = displayOrders;
 
   return (
     <Layout title="Orders">
@@ -530,9 +639,7 @@ function Orders({ loader, user }) {
             header="No."
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
-              <span className="text-gray-600">
-                {rowData.index || 'N/A'}
-              </span>
+              <span className="text-gray-600">{rowData.index || "N/A"}</span>
             )}
           />
           <Column
@@ -600,10 +707,10 @@ function Orders({ loader, user }) {
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
               <span>
-                {rowData?.route 
-                  ? (typeof rowData.route === 'string' 
-                      ? rowData.route 
-                      : rowData.route?.routeName || 'Assigned')
+                {rowData?.route
+                  ? typeof rowData.route === "string"
+                    ? rowData.route
+                    : rowData.route?.routeName || "Assigned"
                   : "N/A"}
               </span>
             )}
@@ -1099,7 +1206,7 @@ function Orders({ loader, user }) {
       )}
 
       {viewModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <Modal open={viewModal} className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -1249,7 +1356,7 @@ function Orders({ loader, user }) {
               {/* Additional details can be added here */}
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {assignModal && (
@@ -1316,6 +1423,20 @@ function Orders({ loader, user }) {
           </div>
         </div>
       )}
+
+      {/* Dynamic Dialog Component */}
+      <Dialog
+        open={dialogConfig.open}
+        type={dialogConfig.type}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+        onClose={closeDialog}
+        customIcon={dialogConfig.customIcon}
+      />
     </Layout>
   );
 }

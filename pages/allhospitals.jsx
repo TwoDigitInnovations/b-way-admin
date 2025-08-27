@@ -22,6 +22,8 @@ import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
 import isAuth from "@/components/isAuth";
 import { Api } from "@/helper/service";
+import Dialog from "@/components/Dialog";
+import toast from "react-hot-toast";
 import { AutoComplete } from "primereact/autocomplete";
 import { getStateAndCityPicklist } from "@/utils/states";
 
@@ -349,8 +351,20 @@ function HospitalsFacilities({ loader }) {
 
   const menuRef = useRef(null);
   const [selectedRowData, setSelectedRowData] = useState(null);
+  const [viewModal, setViewModal] = useState(false);
 
   const [facilities, setFacilities] = useState([]);
+
+  // Dialog state
+  const [dialogConfig, setDialogConfig] = useState({
+    open: false,
+    type: "info",
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
 
   const toggleDropdown = (index) => {
     setActiveDropdown(activeDropdown === index ? null : index);
@@ -391,12 +405,57 @@ function HospitalsFacilities({ loader }) {
     }
   };
 
+  const handleDelete = async (hospital) => {
+    try {
+      loader(true);
+      const response = await Api("DELETE", "/hospital/" + hospital._id);
+
+      if (response.status) {
+        toast.success("Hospital deleted successfully");
+        // Refresh the hospital list
+        const hospitalsResponse = await Api(
+          "GET",
+          "/hospital?page=" + currentPage + "&limit=" + limit
+        );
+        if (hospitalsResponse.status) {
+          setFacilities(hospitalsResponse.data);
+          setTotalPages(hospitalsResponse.totalPages);
+          setTotalRecords(hospitalsResponse.total);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting hospital:", error);
+      toast.error("Failed to delete hospital. Please try again.");
+    } finally {
+      loader(false);
+      closeDialog();
+    }
+  };
+
+  // Dialog helper functions
+  const showDeleteDialog = (hospital) => {
+    setDialogConfig({
+      open: true,
+      type: "danger",
+      title: "Delete Hospital",
+      message: `Are you sure you want to delete hospital "${hospital.hospitalName || hospital.name}"? This action cannot be undone and will affect all related orders and routes.`,
+      confirmText: "Delete Hospital",
+      cancelText: "Cancel",
+      onConfirm: () => handleDelete(hospital),
+      customIcon: Trash,
+    });
+  };
+
+  const closeDialog = () => {
+    setDialogConfig(prev => ({ ...prev, open: false }));
+  };
+
   const getMenuItems = (order) => [
     {
       label: "View",
       icon: <Eye className="w-5 h-5 text-gray-500" />,
       command: () => {
-        console.log("View clicked", order);
+        fetchHospitalDetailsForView(order._id);
       },
     },
     {
@@ -412,6 +471,7 @@ function HospitalsFacilities({ loader }) {
       icon: <Trash className="w-5 h-5 text-gray-500" />,
       command: () => {
         console.log("Delete clicked", order);
+        showDeleteDialog(order);
       },
     },
   ];
@@ -443,6 +503,24 @@ function HospitalsFacilities({ loader }) {
       });
   }, [currentPage, limit]);
 
+  const fetchHospitalDetailsForView = (id) => {
+    loader(true);
+    Api("GET", `/auth/user/${id}`)
+      .then((response) => {
+        console.log("Hospital view details fetched:", response);
+        setSelectedRowData(response.data || response);
+        setViewModal(true);
+      })
+      .catch((error) => {
+        toast.error(
+          error?.message || "Failed to fetch hospital details. Please try again."
+        );
+      })
+      .finally(() => {
+        loader(false);
+      });
+  };
+
   const handlePageChange = (event) => {
     setCurrentPage(event.page + 1);
   };
@@ -457,12 +535,12 @@ function HospitalsFacilities({ loader }) {
             All Hospitals
           </span>
 
-          <button
+          {/* <button
             onClick={handleAddNew}
             className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700 transition-colors"
           >
             Add New
-          </button>
+          </button> */}
         </div>
 
         {/* Table with Horizontal Scroll for All Screen Sizes */}
@@ -568,6 +646,183 @@ function HospitalsFacilities({ loader }) {
         id="popup_menu"
       />
 
+      {/* View Details Modal */}
+      {viewModal && selectedRowData && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Hospital Details
+              </h2>
+              <button
+                onClick={() => {
+                  setViewModal(false);
+                  setSelectedRowData(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <div className="bg-white">
+                <dl className="w-full grid grid-cols-6 gap-4">
+                  {/* Basic Information */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-2">
+                    Basic Information
+                  </h2>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Hospital Name
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.name || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Contact Person
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.primaryContact || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Phone
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.phone || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Email
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.email || "N/A"}
+                    </dd>
+                  </div>
+
+                  {/* Address Information */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Billing Information
+                  </h2>
+                  <div className="col-span-6 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Full Address
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.billing_Address ? 
+                        `${selectedRowData?.user?.billing_Address.address} `
+                        : "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      City
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.billing_Address?.city || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      State
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.billing_Address?.state || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Zipcode
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.billing_Address?.zipcode || "N/A"}
+                    </dd>
+                  </div>
+
+<h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Shipping Information
+                  </h2>
+                  <div className="col-span-6 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Full Address
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.delivery_Address ? 
+                        `${selectedRowData?.user?.delivery_Address.address} `
+                        : "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      City
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.delivery_Address?.city || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      State
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.delivery_Address?.state || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Zipcode
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.delivery_Address?.zipcode || "N/A"}
+                    </dd>
+                  </div>
+                  {/* Service Information */}
+                  {/* <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Service Information
+                  </h2> */}
+                  {/* <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Assigned Route
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.assignedRoute || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Delivery Window
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.deliveryWindow || "2AM - 6PM"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Facility Type
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.role || selectedRowData?.type || "Hospital"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Status
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.status || "Active"}
+                    </dd>
+                  </div> */}
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal */}
       <AddEditModal
         isOpen={modalOpen}
@@ -575,6 +830,20 @@ function HospitalsFacilities({ loader }) {
         mode={modalMode}
         facility={selectedFacility}
         onSubmit={handleModalSubmit}
+      />
+
+      {/* Dynamic Dialog Component */}
+      <Dialog
+        open={dialogConfig.open}
+        type={dialogConfig.type}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+        onClose={closeDialog}
+        customIcon={dialogConfig.customIcon}
       />
     </Layout>
   );

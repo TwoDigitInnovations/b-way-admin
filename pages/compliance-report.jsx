@@ -38,6 +38,8 @@ import { InputTextarea } from "primereact/inputtextarea";
 import { FileUpload } from "primereact/fileupload";
 import Layout from "@/components/layout";
 import { Api } from "@/helper/service";
+import CustomDialog from "@/components/Dialog";
+import toast from "react-hot-toast";
 import Box from "@mui/material/Box";
 import Stepper from "@mui/material/Stepper";
 import Step from "@mui/material/Step";
@@ -466,6 +468,7 @@ function Compliances({ loader }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add");
   const [selectedFacility, setSelectedFacility] = useState(null);
+  const [viewModal, setViewModal] = useState(false);
   const [complianceData, setComplianceData] = useState([]);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -476,6 +479,17 @@ function Compliances({ loader }) {
     regulationType: "",
     status: "",
     riskLevel: "",
+  });
+
+  // Dialog state
+  const [dialogConfig, setDialogConfig] = useState({
+    open: false,
+    type: "info",
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
   });
 
   // Load compliance reports
@@ -505,6 +519,24 @@ function Compliances({ loader }) {
     } finally {
       loader(false);
     }
+  };
+
+  const fetchComplianceDetailsForView = (id) => {
+    loader(true);
+    Api("get", `/compliance/${id}`)
+      .then((response) => {
+        console.log("Compliance view details fetched:", response);
+        setSelectedRowData(response.data || response);
+        setViewModal(true);
+      })
+      .catch((error) => {
+        toast.error(
+          error?.message || "Failed to fetch compliance details. Please try again."
+        );
+      })
+      .finally(() => {
+        loader(false);
+      });
   };
 
   // Load dashboard data
@@ -565,19 +597,70 @@ function Compliances({ loader }) {
   };
 
   const handleDelete = async (reportId) => {
-    if (
-      window.confirm("Are you sure you want to delete this compliance report?")
-    ) {
-      try {
-        const response = await Api("delete", `/compliance/${reportId}`);
-        if (response.data.status) {
-          loadComplianceReports();
-          loadDashboardData();
-        }
-      } catch (error) {
-        console.error("Error deleting compliance report:", error);
+    try {
+      loader(true);
+      const response = await Api("delete", `/compliance/${reportId}`);
+      if (response.data.status) {
+        toast.success("Compliance report deleted successfully");
+        loadComplianceReports();
+        loadDashboardData();
       }
+    } catch (error) {
+      console.error("Error deleting compliance report:", error);
+      toast.error("Failed to delete compliance report. Please try again.");
+    } finally {
+      loader(false);
+      closeDialog();
     }
+  };
+
+  // Dialog helper functions
+  const showDeleteDialog = (report) => {
+    setDialogConfig({
+      open: true,
+      type: "danger",
+      title: "Delete Compliance Report",
+      message: `Are you sure you want to delete compliance report "${report.reportTitle || report.regulationType}"? This action cannot be undone and will affect audit trails.`,
+      confirmText: "Delete Report",
+      cancelText: "Cancel",
+      onConfirm: () => handleDelete(report._id),
+      customIcon: Trash,
+    });
+  };
+
+  const showArchiveDialog = (report) => {
+    setDialogConfig({
+      open: true,
+      type: "warning",
+      title: "Archive Compliance Report",
+      message: `Are you sure you want to archive compliance report "${report.reportTitle || report.regulationType}"? Archived reports can be restored later.`,
+      confirmText: "Archive Report",
+      cancelText: "Cancel",
+      onConfirm: () => handleArchive(report._id),
+      customIcon: Archive,
+    });
+  };
+
+  const handleArchive = async (reportId) => {
+    try {
+      loader(true);
+      const response = await Api("PUT", `/compliance/${reportId}/archive`);
+      if (response.data.status) {
+        toast.success("Compliance report archived successfully");
+        loadComplianceReports();
+        loadDashboardData();
+      }
+    } catch (error) {
+      console.error("Error archiving compliance report:", error);
+      toast.error("Failed to archive compliance report. Please try again.");
+    } finally {
+      loader(false);
+      closeDialog();
+    }
+  };
+
+  const closeDialog = () => {
+    setDialogConfig(prev => ({ ...prev, open: false }));
   };
 
   const handleDownloadAudit = async (reportId) => {
@@ -609,7 +692,7 @@ function Compliances({ loader }) {
       label: "View Details",
       icon: <Eye className="w-5 h-5 text-gray-500" />,
       command: () => {
-        console.log("View clicked", row);
+        fetchComplianceDetailsForView(row._id);
       },
     },
     {
@@ -627,10 +710,17 @@ function Compliances({ loader }) {
       },
     },
     {
+      label: "Archive Report",
+      icon: <Archive className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        showArchiveDialog(row);
+      },
+    },
+    {
       label: "Delete",
       icon: <Trash className="w-5 h-5 text-gray-500" />,
       command: () => {
-        handleDelete(row._id);
+        showDeleteDialog(row);
       },
     },
   ];
@@ -711,7 +801,7 @@ function Compliances({ loader }) {
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <select
               value={filters.regulationType}
               onChange={(e) =>
@@ -781,7 +871,7 @@ function Compliances({ loader }) {
               <RotateCcw className="w-4 h-4" />
               <span>Reset</span>
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Table */}
@@ -893,6 +983,168 @@ function Compliances({ loader }) {
         mode={modalMode}
         facility={selectedFacility}
         onSubmit={handleModalSubmit}
+      />
+
+      {/* View Details Modal */}
+      {viewModal && selectedRowData && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Compliance Report Details
+              </h2>
+              <button
+                onClick={() => {
+                  setViewModal(false);
+                  setSelectedRowData(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <div className="bg-white">
+                <dl className="w-full grid grid-cols-6 gap-4">
+                  {/* Basic Information */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-2">
+                    Report Information
+                  </h2>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Report Id
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?._id || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Regulation Type
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.regulationType || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Report Date
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.date ? new Date(selectedRowData.date).toLocaleDateString() : "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Status
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        selectedRowData?.status === 'approved' 
+                          ? 'bg-green-100 text-green-800' 
+                          : selectedRowData?.status === 'pending_review'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : selectedRowData?.status === 'draft'
+                          ? 'bg-gray-100 text-gray-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {selectedRowData?.status?.replace('_', ' ').toUpperCase() || "N/A"}
+                      </span>
+                    </dd>
+                  </div>
+
+                  {/* Risk Assessment */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Risk Assessment
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Risk Level
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        selectedRowData?.riskLevel === 'High' 
+                          ? 'bg-red-100 text-red-800' 
+                          : selectedRowData?.riskLevel === 'Medium'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {selectedRowData?.riskLevel || "N/A"}
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Compliance Score
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.complianceRate ? `${selectedRowData.complianceRate.toFixed(2)}%` : "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-6 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Risk Description
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.riskDescription || "No risk description available"}
+                    </dd>
+                  </div>
+
+                  {/* Audit Information */}
+                  {/* <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Audit Information
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Auditor
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.auditor || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Audit Date
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.auditDate ? new Date(selectedRowData.auditDate).toLocaleDateString() : "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-6 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Findings
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.findings || "No findings recorded"}
+                    </dd>
+                  </div>
+                  <div className="col-span-6 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Recommendations
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.recommendations || "No recommendations provided"}
+                    </dd>
+                  </div> */}
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Dialog Component */}
+      <CustomDialog
+        open={dialogConfig.open}
+        type={dialogConfig.type}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+        onClose={closeDialog}
+        customIcon={dialogConfig.customIcon}
       />
     </Layout>
   );

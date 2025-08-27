@@ -306,8 +306,8 @@ export default function Layout({ children, title }) {
                       }`}
                     >
                       <option value="">Select Role</option>
-                      <option value="ADMIN">Admin</option>
                       <option value="CLIENT">Client</option>
+                      <option value="CLINIC">Clinic</option>
                       <option value="HOSPITAL">Hospital</option>
                     </Field>
                     <ErrorMessage

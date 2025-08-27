@@ -268,7 +268,7 @@ export default function Operational({
           )}
 
           {/* Recent Orders Table */}
-          {(user?.role === "CLIENT" || user?.role === "HOSPITAL") ? (
+          {(user?.role === "CLIENT" || user?.role === "HOSPITAL" || user?.role === "CLINIC") ? (
             <div className={`col-span-${user?.role === "ADMIN" ? "4" : "5"}`}>
               <div className="bg-white rounded-lg border border-gray-200">
                 <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -277,7 +277,7 @@ export default function Operational({
                   </h3>
                   <button
                     className="text-[#003C72] hover:text-[#003C72] font-medium text-sm lg:text-base"
-                    onClick={() => router.push("/ordersv")}
+                    onClick={() => router.push("/orders")}
                   >
                     View All
                   </button>
@@ -437,7 +437,7 @@ export default function Operational({
                   </h3>
                   <button
                     className="text-[#003C72] hover:text-[#003C72] font-medium text-sm lg:text-base"
-                    onClick={() => router.push("/ordersv")}
+                    onClick={() => router.push("/orders")}
                   >
                     View All
                   </button>

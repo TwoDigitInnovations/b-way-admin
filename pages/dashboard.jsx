@@ -1,39 +1,5 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
-import {
-  Search,
-  Bell,
-  ChevronDown,
-  TrendingUp,
-  Package,
-  DollarSign,
-  MapPin,
-  AlertTriangle,
-  Plus,
-  Eye,
-  Route,
-  FileText,
-  CreditCard,
-  LifeBuoy,
-  Menu,
-  X,
-  Home,
-  Users,
-  Truck,
-  Settings,
-  FileBarChart,
-  LogOut,
-  Wifi,
-  WifiOff,
-} from "lucide-react";
 import Operational from "@/components/Operational";
 import Investor from "@/components/Investor";
 import { useRouter } from "next/router";
@@ -43,12 +9,11 @@ import { Api } from "@/helper/service";
 import { useSocket } from "@/contexts/SocketContext";
 
 function Dashboard({ user }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("operational");
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(user);
+  const [data, setData] = useState(null);
 
   const { isConnected, orders: realtimeOrders } = useSocket();
 
@@ -100,15 +65,21 @@ function Dashboard({ user }) {
     const filteredRecentOrders = recentOrders.filter(
       (order) => !realtimeOrderIds.has(order._id)
     );
-    
+
     const indexedRealtimeOrders = realtimeOrders.map((order, index) => ({
       ...order,
       no: index + 1,
-      facilityName: order.facilityName || order.user?.name || 'N/A',
-      route: typeof order.route === 'string' ? order.route : (order.route?.routeName || 'N/A'),
-      items: typeof order.items === 'string' ? order.items : (order.items?.name || 'N/A')
+      facilityName: order.facilityName || order.user?.name || "N/A",
+      route:
+        typeof order.route === "string"
+          ? order.route
+          : order.route?.routeName || "N/A",
+      items:
+        typeof order.items === "string"
+          ? order.items
+          : order.items?.name || "N/A",
     }));
-    
+
     const combined = [...indexedRealtimeOrders, ...filteredRecentOrders];
 
     console.log("Combined orders result:", {
@@ -123,15 +94,29 @@ function Dashboard({ user }) {
     fetchRecentOrders();
   }, []);
 
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await Api("GET", "/dashboard/stats", null, router);
+      console.log("Dashboard stats:", response);
+      setData(response);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
   const statsCards = [
     {
       title: "Active Routes",
-      value: "18",
-      change: "13% active",
+      value: data?.routeCount || "0",
+      change: data?.data?.activeRoutesChangeText || "No change",
       changeText: "Broaches",
       icon: "/images/img5.png",
       trend: "up",
-      role: ["ADMIN", "DISPATCHER", "CLIENT", "HOSPITAL"],
+      role: ["ADMIN", "DISPATCHER", "CLIENT", "HOSPITAL", "CLINIC"],
     },
     {
       title: "Proof Of Delivery",
@@ -140,7 +125,7 @@ function Dashboard({ user }) {
       icon: "/images/img5.png",
       // trend: "up",
       color: "yellow",
-      role: ["CLIENT", "HOSPITAL"],
+      role: ["CLIENT", "HOSPITAL", "CLINIC"],
     },
     {
       title: "Missing Delivery",
@@ -160,39 +145,39 @@ function Dashboard({ user }) {
     },
     {
       title: "Orders in Transit",
-      value: "46",
+      value: data?.data?.ordersInTransit || "0",
       change: "",
       icon: "/images/img6.png",
       color: "yellow",
       trend: "up",
-      role: ["ADMIN", "DISPATCHER", "HOSPITAL"],
+      role: ["ADMIN", "DISPATCHER", "HOSPITAL", "CLINIC"],
     },
     {
       title: "Sales this Week",
-      value: "92000",
+      value: data?.data?.salesThisWeek || "$0",
       change: "7% Up from past week",
       icon: "/images/img7.png",
       color: "green",
       trend: "up",
-      role: ["ADMIN", "DISPATCHER", "HOSPITAL"],
+      role: ["ADMIN", "DISPATCHER", "HOSPITAL", "CLINIC"],
     },
     {
       title: "Facilities",
-      value: "204",
+      value: data?.data?.facilities || "0",
       change: "Active Broaches",
       icon: "/images/img3.png",
       color: "red",
       trend: "up",
-      role: ["ADMIN", "DISPATCHER", "HOSPITAL"],
+      role: ["ADMIN", "DISPATCHER", "HOSPITAL", "CLINIC"],
     },
     {
       title: "Compliance Alerts",
-      value: "204",
-      change: "5 Flagged alerts",
+      value: data?.complianceAlerts || "0",
+      change: data?.data?.complianceAlertsText || "No flagged alerts",
       icon: "/images/img4.png",
       color: "blue",
       trend: "up",
-      role: ["ADMIN", "DISPATCHER", "CLIENT", "HOSPITAL"],
+      role: ["ADMIN", "DISPATCHER", "CLIENT", "HOSPITAL", "CLINIC"],
     },
     {
       title: "Daily Work Completed",
@@ -201,11 +186,11 @@ function Dashboard({ user }) {
       icon: "/images/wait.png",
       color: "blue",
       // trend: "up",
-      role: ["CLIENT", "HOSPITAL"],
+      role: ["CLIENT", "HOSPITAL", "CLINIC"],
     },
     {
       title: "Available Drivers",
-      value: "204",
+      value: data?.driverCount || "0",
       icon: "/images/driver.png",
       change: "5 Flagged alerts",
       trend: "up",
@@ -213,7 +198,7 @@ function Dashboard({ user }) {
     },
     {
       title: "Available Partners",
-      value: "400",
+      value: data?.partnerCount || "0",
       icon: "/images/user.png",
       change: "5 Flagged alerts",
       trend: "up",

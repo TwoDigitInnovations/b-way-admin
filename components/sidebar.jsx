@@ -25,7 +25,7 @@ const Sidebar = () => {
       label: "Dashboard",
       // href: user?.role === "ADMIN" ? "/dashboard" : "/dashboard",
       href: "/dashboard",
-      role: ["ADMIN", "CLIENT", "DRIVER", "DISPATCHER", "HOSPITAL"],
+      role: ["ADMIN", "CLIENT", "DRIVER", "DISPATCHER", "HOSPITAL", 'CLINIC'],
     },
     {
       icon: "/images/s1.png",
@@ -36,20 +36,20 @@ const Sidebar = () => {
     {
       icon: "/images/s1.png",
       label: "Orders",
-      href: "/ordersv",
-      role: ["ADMIN", "DISPATCHER", "CLIENT", "HOSPITAL"],
+      href: "/orders",
+      role: ["ADMIN", "DISPATCHER", "CLIENT", "HOSPITAL", "CLINIC"],
     },
     {
       icon: "/images/s1.png",
       label: "New Delivery Request",
       href: "/new-order",
-      role: ["HOSPITAL"],
+      role: ["HOSPITAL", "CLINIC"],
     },
     {
       icon: "/images/s2.png",
       label: "Routes & Schedules",
       href: "/allroutes",
-      role: ["ADMIN", "HOSPITAL"],
+      role: ["ADMIN", "HOSPITAL", "CLINIC"],
     },
     {
       icon: "/images/s3.png",
@@ -97,13 +97,13 @@ const Sidebar = () => {
       icon: "/images/manage_accounts.svg",
       label: "Account Information",
       href: "/account-info",
-      role: ["HOSPITAL"],
+      role: ["HOSPITAL", "CLINIC"],
     },
     {
       icon: "/images/headset_mic.svg",
       label: "Support & Help Center",
       href: "/support",
-      role: ["HOSPITAL"],
+      role: ["HOSPITAL", "CLINIC"],
     },
     // {
     //   icon: "/images/s6.png",

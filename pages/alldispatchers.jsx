@@ -18,6 +18,8 @@ import { Button } from "primereact/button";
 import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
 import { Api } from "@/helper/service";
+import Dialog from "@/components/Dialog";
+import toast from "react-hot-toast";
 
 function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   const [formData, setFormData] = useState({
@@ -192,11 +194,23 @@ function AllDispatchers({loader}) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add");
   const [selectedFacility, setSelectedFacility] = useState(null);
+  const [viewModal, setViewModal] = useState(false);
   const [dispatchersData, setDispatchersData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalRecords, setTotalRecords] = useState(0);
   const limit = 10;
+
+  // Dialog state
+  const [dialogConfig, setDialogConfig] = useState({
+    open: false,
+    type: "info",
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
 
   const handleModalSubmit = (formData) => {
     if (modalMode === "add") {
@@ -229,12 +243,57 @@ function AllDispatchers({loader}) {
     setModalOpen(true);
   };
 
+  const handleDelete = async (dispatcher) => {
+    try {
+      loader(true);
+      const response = await Api("DELETE", "/auth/" + dispatcher._id);
+
+      if (response.status) {
+        toast.success("Dispatcher deleted successfully");
+        // Refresh the dispatcher list
+        const dispatchersResponse = await Api(
+          "GET",
+          "/auth/DISPATCHER?page=" + currentPage + "&limit=" + limit
+        );
+        if (dispatchersResponse.status) {
+          setDispatchersData(dispatchersResponse.data);
+          setTotalPages(dispatchersResponse.totalPages);
+          setTotalRecords(dispatchersResponse.total);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting dispatcher:", error);
+      toast.error("Failed to delete dispatcher. Please try again.");
+    } finally {
+      loader(false);
+      closeDialog();
+    }
+  };
+
+  // Dialog helper functions
+  const showDeleteDialog = (dispatcher) => {
+    setDialogConfig({
+      open: true,
+      type: "danger",
+      title: "Delete Dispatcher",
+      message: `Are you sure you want to delete dispatcher "${dispatcher.name}"? This action cannot be undone.`,
+      confirmText: "Delete Dispatcher",
+      cancelText: "Cancel",
+      onConfirm: () => handleDelete(dispatcher),
+      customIcon: Trash,
+    });
+  };
+
+  const closeDialog = () => {
+    setDialogConfig(prev => ({ ...prev, open: false }));
+  };
+
   const getMenuItems = (row) => [
     {
       label: "View",
       icon: <Eye className="w-5 h-5 text-gray-500" />,
       command: () => {
-        console.log("View clicked", row);
+        fetchDispatcherDetailsForView(row._id);
       },
     },
     {
@@ -250,6 +309,7 @@ function AllDispatchers({loader}) {
       icon: <Trash className="w-5 h-5 text-gray-500" />,
       command: () => {
         console.log("Delete clicked", row);
+        showDeleteDialog(row);
       },
     },
   ];
@@ -305,6 +365,24 @@ function AllDispatchers({loader}) {
         loader(false);
       });
   }, [currentPage, limit]);
+
+  const fetchDispatcherDetailsForView = (id) => {
+    loader(true);
+    Api("GET", `/auth/user/${id}`)
+      .then((response) => {
+        console.log("Dispatcher view details fetched:", response);
+        setSelectedRowData(response.data || response);
+        setViewModal(true);
+      })
+      .catch((error) => {
+        toast.error(
+          error?.message || "Failed to fetch dispatcher details. Please try again."
+        );
+      })
+      .finally(() => {
+        loader(false);
+      });
+  };
 
   const handlePageChange = (event) => {
     setCurrentPage(event.page + 1);
@@ -415,6 +493,136 @@ function AllDispatchers({loader}) {
         mode={modalMode}
         facility={selectedFacility}
         onSubmit={handleModalSubmit}
+      />
+
+      {/* View Details Modal */}
+      {viewModal && selectedRowData && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Dispatcher Details
+              </h2>
+              <button
+                onClick={() => {
+                  setViewModal(false);
+                  setSelectedRowData(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <div className="bg-white">
+                <dl className="w-full grid grid-cols-6 gap-4">
+                  {/* Personal Information */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-2">
+                    Personal Information
+                  </h2>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Full Name
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.name || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Email
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.email || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Phone
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.phone || "N/A"}
+                    </dd>
+                  </div>
+
+                  {/* Role Information */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Role & Status
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Role
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.role || "Dispatcher"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Status
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusStyle(selectedRowData?.status)}`}>
+                        {selectedRowData?.status || "Active"}
+                      </span>
+                    </dd>
+                  </div>
+                  {/* <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Assigned Routes
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.assignedRoute || "N/A"}
+                    </dd>
+                  </div> */}
+                  {/* <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Department
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.department || "Logistics"}
+                    </dd>
+                  </div> */}
+
+                  {/* Account Information */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Account Information
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Join Date
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.user?.createdAt ? new Date(selectedRowData.user.createdAt).toLocaleDateString() : "N/A"}
+                    </dd>
+                  </div>
+                  {/* <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Last Login
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.lastLogin ? new Date(selectedRowData.lastLogin).toLocaleDateString() : "N/A"}
+                    </dd>
+                  </div> */}
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Dialog Component */}
+      <Dialog
+        open={dialogConfig.open}
+        type={dialogConfig.type}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+        onClose={closeDialog}
+        customIcon={dialogConfig.customIcon}
       />
     </Layout>
   );

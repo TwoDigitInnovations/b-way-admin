@@ -6,6 +6,8 @@ import { Menu } from "primereact/menu";
 import Layout from "@/components/layout";
 import isAuth from "@/components/isAuth";
 import { Api } from "@/helper/service";
+import Dialog from "@/components/Dialog";
+import toast from "react-hot-toast";
 
 function AddEditModal({ isOpen, onClose, mode, facility, onSubmit }) {
   const [formData, setFormData] = useState({
@@ -257,11 +259,23 @@ function DriversVehicles({ loader }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add");
   const [selectedFacility, setSelectedFacility] = useState(null);
+  const [viewModal, setViewModal] = useState(false);
   const [driversData, setDriversData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalRecords, setTotalRecords] = useState(0);
   const limit = 10;
+
+  // Dialog state
+  const [dialogConfig, setDialogConfig] = useState({
+    open: false,
+    type: "info",
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
 
   const handleModalSubmit = async (formData) => {
     try {
@@ -339,30 +353,48 @@ function DriversVehicles({ loader }) {
   };
 
   const handleDelete = async (driver) => {
-    if (window.confirm("Are you sure you want to delete this driver?")) {
-      try {
-        loader(true);
-        const response = await Api("DELETE", "/driver/" + driver._id);
+    try {
+      loader(true);
+      const response = await Api("DELETE", "/driver/" + driver._id);
 
-        if (response.status) {
-          console.log("Driver deleted successfully");
-          // Refresh the driver list
-          const driversResponse = await Api(
-            "GET",
-            "/driver?page=" + currentPage + "&limit=" + limit
-          );
-          if (driversResponse.status) {
-            setDriversData(driversResponse.data);
-            setTotalPages(driversResponse.totalPages);
-            setTotalRecords(driversResponse.total);
-          }
+      if (response.status) {
+        toast.success("Driver deleted successfully");
+        // Refresh the driver list
+        const driversResponse = await Api(
+          "GET",
+          "/driver?page=" + currentPage + "&limit=" + limit
+        );
+        if (driversResponse.status) {
+          setDriversData(driversResponse.data);
+          setTotalPages(driversResponse.totalPages);
+          setTotalRecords(driversResponse.total);
         }
-      } catch (error) {
-        console.error("Error deleting driver:", error);
-      } finally {
-        loader(false);
       }
+    } catch (error) {
+      console.error("Error deleting driver:", error);
+      toast.error("Failed to delete driver. Please try again.");
+    } finally {
+      loader(false);
+      closeDialog();
     }
+  };
+
+  // Dialog helper functions
+  const showDeleteDialog = (driver) => {
+    setDialogConfig({
+      open: true,
+      type: "danger",
+      title: "Delete Driver",
+      message: `Are you sure you want to delete driver "${driver.driver?.name || driver.name}"? This action cannot be undone and will affect all assigned routes.`,
+      confirmText: "Delete Driver",
+      cancelText: "Cancel",
+      onConfirm: () => handleDelete(driver),
+      customIcon: Trash,
+    });
+  };
+
+  const closeDialog = () => {
+    setDialogConfig(prev => ({ ...prev, open: false }));
   };
 
   const getMenuItems = (row) => [
@@ -370,7 +402,7 @@ function DriversVehicles({ loader }) {
       label: "View",
       icon: <Eye className="w-5 h-5 text-gray-500" />,
       command: () => {
-        console.log("View clicked", row);
+        fetchDriverDetailsForView(row._id);
       },
     },
     {
@@ -385,7 +417,7 @@ function DriversVehicles({ loader }) {
       label: "Delete",
       icon: <Trash className="w-5 h-5 text-gray-500" />,
       command: () => {
-        handleDelete(row);
+        showDeleteDialog(row);
       },
     },
   ];
@@ -449,6 +481,24 @@ function DriversVehicles({ loader }) {
         loader(false);
       });
   }, [currentPage, limit]);
+
+  const fetchDriverDetailsForView = (id) => {
+    loader(true);
+    Api("GET", `/driver/${id}`)
+      .then((response) => {
+        console.log("Driver view details fetched:", response);
+        setSelectedRowData(response.data || response);
+        setViewModal(true);
+      })
+      .catch((error) => {
+        toast.error(
+          error?.message || "Failed to fetch driver details. Please try again."
+        );
+      })
+      .finally(() => {
+        loader(false);
+      });
+  };
 
   const handlePageChange = (event) => {
     setCurrentPage(event.page + 1);
@@ -605,6 +655,144 @@ function DriversVehicles({ loader }) {
         mode={modalMode}
         facility={selectedFacility}
         onSubmit={handleModalSubmit}
+      />
+
+      {/* View Details Modal */}
+      {viewModal && selectedRowData && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Driver Details
+              </h2>
+              <button
+                onClick={() => {
+                  setViewModal(false);
+                  setSelectedRowData(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <div className="bg-white">
+                <dl className="w-full grid grid-cols-6 gap-4">
+                  {/* Driver Information */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-2">
+                    Driver Information
+                  </h2>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Driver Name
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.driver?.name || selectedRowData?.name || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Email
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.driver?.email || selectedRowData?.email || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Phone
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.driver?.phone || selectedRowData?.phone || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      License Number
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.licenseNumber || "N/A"}
+                    </dd>
+                  </div>
+
+                  {/* Vehicle Information */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Vehicle Information
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Vehicle Type
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.vehicleType || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Vehicle Registration
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.vehicleRegistration || "N/A"}
+                    </dd>
+                  </div>
+
+                  {/* Assignment Information */}
+                  <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                    Assignment Information
+                  </h2>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Assigned Routes
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {Array.isArray(selectedRowData?.assignedRoute) 
+                        ? selectedRowData.assignedRoute.map(route => route.routeName || route).join(", ")
+                        : selectedRowData?.assignedRoute?.routeName || selectedRowData?.assignedRoute || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Status
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        selectedRowData?.status === 'Active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : selectedRowData?.status === 'Inactive'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {selectedRowData?.status || "N/A"}
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="col-span-3 pb-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Current Location
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedRowData?.currentLocation || "N/A"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Dialog Component */}
+      <Dialog
+        open={dialogConfig.open}
+        type={dialogConfig.type}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+        onClose={closeDialog}
+        customIcon={dialogConfig.customIcon}
       />
     </Layout>
   );

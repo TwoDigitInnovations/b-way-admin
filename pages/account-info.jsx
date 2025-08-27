@@ -311,7 +311,7 @@ function AccountInfo({ loader, user }) {
                       <input
                         type="email"
                         className="w-full rounded border px-3 py-2 text-sm text-black border-gray-200 h-10"
-                        placeholder="Enter Email"
+                        placeholder="Enter your email"
                         name="email"
                         value={values.email}
                         onChange={handleChange}

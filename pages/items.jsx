@@ -31,6 +31,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchUserList } from "@/store/userList";
 import { Autocomplete, MenuItem, Select, TextField } from "@mui/material";
 import { getStateAndCityPicklist } from "@/utils/states";
+import Dialog from "@/components/Dialog";
 
 function Items({ loader, user }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -38,6 +39,17 @@ function Items({ loader, user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+
+  // Dialog state
+  const [dialogConfig, setDialogConfig] = useState({
+    open: false,
+    type: "info",
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    cancelText: "Cancel",
+    onConfirm: () => {},
+  });
   const menuRef = useRef(null);
   const [selectedRowData, setSelectedRowData] = useState(null);
   const [items, setItems] = useState([]);
@@ -76,7 +88,7 @@ function Items({ loader, user }) {
       .min(0, "Stock must be non-negative"),
     dispatcher: Yup.string().when("$userRole", {
       is: "ADMIN",
-      then: (schema) => schema.required("Dispatcher is required"),
+      then: (schema) => schema.optional(), // Made optional for flexibility
       otherwise: (schema) => schema.optional(),
     }),
     pickupLocation: Yup.object({
@@ -109,14 +121,18 @@ function Items({ loader, user }) {
         state: values.pickupLocation.state,
         zipcode: values.pickupLocation.zipcode,
       },
-      status: values.status,
     };
 
-    if (user.role === "ADMIN" && values.dispatcher) {
-      // Admin assigns dispatcher
-      itemData.dispatcher = values.dispatcher;
+    if (user.role === "ADMIN") {
+      // Admin can assign dispatcher and set status
+      itemData.status = values.status;
+      if (values.dispatcher) {
+        itemData.dispatcher = values.dispatcher;
+      }
     } else if (user.role === "DISPATCHER") {
+      // Dispatcher creates items with default "Available" status
       itemData.status = "Available";
+      // Dispatcher field will be set by backend to current user
     }
 
     const isEditing = selectedItem && selectedItem._id;
@@ -194,7 +210,7 @@ function Items({ loader, user }) {
             icon: <Trash className="w-5 h-5 text-gray-500" />,
             command: () => {
               console.log("Delete clicked", item);
-              handleDeleteItem(item._id);
+              showDeleteDialog(item);
             },
           },
         ]
@@ -272,7 +288,28 @@ function Items({ loader, user }) {
       })
       .finally(() => {
         loader(false);
+        closeDialog();
       });
+  };
+
+  // Dialog helper functions
+  const showDeleteDialog = (item) => {
+    setDialogConfig({
+      open: true,
+      type: "danger",
+      title: "Delete Item",
+      message: `Are you sure you want to delete the item "${
+        item.itemName || item.name
+      }"? This action cannot be undone and will affect all related orders and inventory.`,
+      confirmText: "Delete Item",
+      cancelText: "Cancel",
+      onConfirm: () => handleDeleteItem(item._id),
+      customIcon: Trash,
+    });
+  };
+
+  const closeDialog = () => {
+    setDialogConfig((prev) => ({ ...prev, open: false }));
   };
 
   useEffect(() => {
@@ -533,60 +570,25 @@ function Items({ loader, user }) {
                 console.log("Selected item:", selectedItem);
                 console.log("Values dispatcher:", values.dispatcher);
                 console.log("UserList:", userList);
-                console.log("Found dispatcher:", userList?.find(d => d._id === values.dispatcher));
-                
+                console.log(
+                  "Found dispatcher:",
+                  userList?.find((d) => d._id === values.dispatcher)
+                );
+
                 return (
-                <form onSubmit={handleSubmit}>
-                  {/* Modal Content */}
-                  <div className="p-4 sm:p-6">
-                    {/* Item Name and Description Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Item Name
-                        </label>
-                        <TextField
-                          sx={{
-                            "& .MuiOutlinedInput-root": {
-                              height: "40px",
-                              fontSize: "14px",
-                              "& fieldset": {
-                                borderColor: "#d1d5db",
-                              },
-                              "&:hover fieldset": {
-                                borderColor: "#9ca3af",
-                              },
-                              "&.Mui-focused fieldset": {
-                                borderColor: "#3b82f6",
-                                borderWidth: "2px",
-                              },
-                            },
-                            "& .MuiInputBase-input": {
-                              color: "#374151",
-                              fontSize: "14px",
-                            },
-                          }}
-                          type="text"
-                          name="name"
-                          value={values.name}
-                          onChange={handleChange}
-                          placeholder="Item Name"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                        />
-                        <span className="text-sm text-red-600">
-                          {errors.name && touched.name && errors.name}
-                        </span>
-                      </div>
-                      {user?.role === "ADMIN" && (
+                  <form onSubmit={handleSubmit}>
+                    {/* Modal Content */}
+                    <div className="p-4 sm:p-6">
+                      {/* Item Name and Description Row */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Status
+                            Item Name
                           </label>
-                          <Select
+                          <TextField
                             sx={{
                               "& .MuiOutlinedInput-root": {
                                 height: "40px",
-                                width: "100%",
                                 fontSize: "14px",
                                 "& fieldset": {
                                   borderColor: "#d1d5db",
@@ -604,154 +606,78 @@ function Items({ loader, user }) {
                                 fontSize: "14px",
                               },
                             }}
-                            name="status"
-                            placeholder="Select Status"
-                            value={values.status}
-                            displayEmpty
+                            type="text"
+                            name="name"
+                            value={values.name}
                             onChange={handleChange}
-                            className="w-full py-2 h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                          >
-                            <MenuItem value="" disabled>
-                              <span style={{ color: "#9ca3af" }}>
-                                Select Status
-                              </span>
-                            </MenuItem>
-                            <MenuItem value="Available">Available</MenuItem>
-                            <MenuItem value="Out of Stock">
-                              Out of Stock
-                            </MenuItem>
-                            <MenuItem value="Discontinued">
-                              Discontinued
-                            </MenuItem>
-                          </Select>
+                            placeholder="Item Name"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
                           <span className="text-sm text-red-600">
-                            {errors.status && touched.status && errors.status}
+                            {errors.name && touched.name && errors.name}
                           </span>
                         </div>
-                      )}
-                    </div>
+                        {user?.role === "ADMIN" && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Status
+                            </label>
+                            <Select
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  width: "100%",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                              name="status"
+                              placeholder="Select Status"
+                              value={values.status}
+                              displayEmpty
+                              onChange={handleChange}
+                              className="w-full py-2 h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                            >
+                              <MenuItem value="" disabled>
+                                <span style={{ color: "#9ca3af" }}>
+                                  Select Status
+                                </span>
+                              </MenuItem>
+                              <MenuItem value="Available">Available</MenuItem>
+                              <MenuItem value="Out of Stock">
+                                Out of Stock
+                              </MenuItem>
+                              <MenuItem value="Discontinued">
+                                Discontinued
+                              </MenuItem>
+                            </Select>
+                            <span className="text-sm text-red-600">
+                              {errors.status && touched.status && errors.status}
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
-                    {/* Price, Category, and Stock Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Price ($)
-                        </label>
-                        <TextField
-                          sx={{
-                            "& .MuiOutlinedInput-root": {
-                              height: "40px",
-                              fontSize: "14px",
-                              "& fieldset": {
-                                borderColor: "#d1d5db",
-                              },
-                              "&:hover fieldset": {
-                                borderColor: "#9ca3af",
-                              },
-                              "&.Mui-focused fieldset": {
-                                borderColor: "#3b82f6",
-                                borderWidth: "2px",
-                              },
-                            },
-                            "& .MuiInputBase-input": {
-                              color: "#374151",
-                              fontSize: "14px",
-                            },
-                          }}
-                          type="number"
-                          name="price"
-                          value={values.price}
-                          onChange={handleChange}
-                          placeholder="0.00"
-                          step="0.01"
-                          min="0"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                        />
-                        <span className="text-sm text-red-600">
-                          {errors.price && touched.price && errors.price}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Category
-                        </label>
-                        <TextField
-                          sx={{
-                            "& .MuiOutlinedInput-root": {
-                              height: "40px",
-                              fontSize: "14px",
-                              "& fieldset": {
-                                borderColor: "#d1d5db",
-                              },
-                              "&:hover fieldset": {
-                                borderColor: "#9ca3af",
-                              },
-                              "&.Mui-focused fieldset": {
-                                borderColor: "#3b82f6",
-                                borderWidth: "2px",
-                              },
-                            },
-                            "& .MuiInputBase-input": {
-                              color: "#374151",
-                              fontSize: "14px",
-                            },
-                          }}
-                          type="text"
-                          name="category"
-                          value={values.category}
-                          onChange={handleChange}
-                          placeholder="Category"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                        />
-                        <span className="text-sm text-red-600">
-                          {errors.category &&
-                            touched.category &&
-                            errors.category}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Stock
-                        </label>
-                        <TextField
-                          sx={{
-                            "& .MuiOutlinedInput-root": {
-                              height: "40px",
-                              fontSize: "14px",
-                              "& fieldset": {
-                                borderColor: "#d1d5db",
-                              },
-                              "&:hover fieldset": {
-                                borderColor: "#9ca3af",
-                              },
-                              "&.Mui-focused fieldset": {
-                                borderColor: "#3b82f6",
-                                borderWidth: "2px",
-                              },
-                            },
-                            "& .MuiInputBase-input": {
-                              color: "#374151",
-                              fontSize: "14px",
-                            },
-                          }}
-                          type="number"
-                          name="stock"
-                          value={values.stock}
-                          onChange={handleChange}
-                          placeholder="Stock"
-                          min="0"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                        />
-                        <span className="text-sm text-red-600">
-                          {errors.stock && touched.stock && errors.stock}
-                        </span>
-                      </div>
-                      {user?.role === "ADMIN" && (
+                      {/* Price, Category, and Stock Row */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Dispatcher
+                            Price ($)
                           </label>
-                          {/* <Select
+                          <TextField
                             sx={{
                               "& .MuiOutlinedInput-root": {
                                 height: "40px",
@@ -772,305 +698,392 @@ function Items({ loader, user }) {
                                 fontSize: "14px",
                               },
                             }}
-                            name="dispatcher"
-                            value={values.dispatcher || ""}
+                            type="number"
+                            name="price"
+                            value={values.price}
                             onChange={handleChange}
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                          >
-                            <option value="">Select Dispatcher</option>
-                            {userList?.map((dispatcher) => (
-                              <option
-                                key={dispatcher._id}
-                                value={dispatcher._id}
-                              >
-                                {dispatcher.name}
-                              </option>
-                            ))}
-                          </Select> */}
-                          <Autocomplete
-                            value={
-                              userList?.find(
-                                (d) => d._id === values.dispatcher
-                              ) || null
-                            }
-                            onChange={(event, newValue) => {
-                              console.log("Dispatcher selected:", newValue);
-                              setFieldValue(
-                                "dispatcher",
-                                newValue ? newValue._id : ""
-                              );
+                          />
+                          <span className="text-sm text-red-600">
+                            {errors.price && touched.price && errors.price}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Category
+                          </label>
+                          <TextField
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                height: "40px",
+                                fontSize: "14px",
+                                "& fieldset": {
+                                  borderColor: "#d1d5db",
+                                },
+                                "&:hover fieldset": {
+                                  borderColor: "#9ca3af",
+                                },
+                                "&.Mui-focused fieldset": {
+                                  borderColor: "#3b82f6",
+                                  borderWidth: "2px",
+                                },
+                              },
+                              "& .MuiInputBase-input": {
+                                color: "#374151",
+                                fontSize: "14px",
+                              },
                             }}
-                            options={userList || []}
-                            getOptionLabel={(option) => option?.name || ""}
-                            isOptionEqualToValue={(option, value) =>
-                              option?._id === value?._id
-                            }
-                            freeSolo={false}
-                            disableClearable={false}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                placeholder="Select dispatcher"
-                                variant="outlined"
-                                size="small"
-                                sx={{
-                                  "& .MuiOutlinedInput-root": {
-                                    height: "40px",
-                                    fontSize: "14px",
-                                    "& fieldset": {
-                                      borderColor: "#d1d5db",
-                                    },
-                                    "&:hover fieldset": {
-                                      borderColor: "#9ca3af",
-                                    },
-                                    "&.Mui-focused fieldset": {
-                                      borderColor: "#3b82f6",
-                                      borderWidth: "2px",
-                                    },
-                                  },
-                                  "& .MuiInputBase-input": {
-                                    color: "#374151",
-                                    fontSize: "14px",
-                                  },
-                                }}
-                              />
-                            )}
-                            renderOption={(props, option) => (
-                              <li {...props} key={option._id}>
-                                {option.name}
-                              </li>
-                            )}
-                            sx={{ width: "100%" }}
-                            ListboxProps={{
-                              style: {
-                                maxHeight: '200px',
+                            type="text"
+                            name="category"
+                            value={values.category}
+                            onChange={handleChange}
+                            placeholder="Category"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
+                          <span className="text-sm text-red-600">
+                            {errors.category &&
+                              touched.category &&
+                              errors.category}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Stock
+                          </label>
+                          <TextField
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                height: "40px",
+                                fontSize: "14px",
+                                "& fieldset": {
+                                  borderColor: "#d1d5db",
+                                },
+                                "&:hover fieldset": {
+                                  borderColor: "#9ca3af",
+                                },
+                                "&.Mui-focused fieldset": {
+                                  borderColor: "#3b82f6",
+                                  borderWidth: "2px",
+                                },
+                              },
+                              "& .MuiInputBase-input": {
+                                color: "#374151",
+                                fontSize: "14px",
+                              },
+                            }}
+                            type="number"
+                            name="stock"
+                            value={values.stock}
+                            onChange={handleChange}
+                            placeholder="Stock"
+                            min="0"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
+                          <span className="text-sm text-red-600">
+                            {errors.stock && touched.stock && errors.stock}
+                          </span>
+                        </div>
+                        {user?.role === "ADMIN" && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Dispatcher
+                            </label>
+                            <Autocomplete
+                              value={
+                                userList?.find(
+                                  (d) => d._id === values.dispatcher
+                                ) || null
                               }
-                            }}
-                          />
-                          <span className="text-sm text-red-600">
-                            {errors.dispatcher &&
-                              touched.dispatcher &&
-                              errors.dispatcher}
-                          </span>
-                        </div>
-                      )}
-                      <div className="col-span-1 md:col-span-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Description
-                        </label>
-                        <textarea
-                          name="description"
-                          value={values.description}
-                          onChange={handleChange}
-                          placeholder="Item Description"
-                          rows="3"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none text-sm text-gray-700"
-                        />
-                        <span className="text-sm text-red-600">
-                          {errors.description &&
-                            touched.description &&
-                            errors.description}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Pickup Location Section */}
-                    <div className="mb-6">
-                      <h3 className="text-md font-semibold text-[#003C72] mb-3">
-                        Pickup Location
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
+                              onChange={(event, newValue) => {
+                                console.log("Dispatcher selected:", newValue);
+                                setFieldValue(
+                                  "dispatcher",
+                                  newValue ? newValue._id : ""
+                                );
+                              }}
+                              options={userList || []}
+                              getOptionLabel={(option) => option?.name || ""}
+                              isOptionEqualToValue={(option, value) =>
+                                option?._id === value?._id
+                              }
+                              freeSolo={false}
+                              disableClearable={false}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  placeholder="Select dispatcher"
+                                  variant="outlined"
+                                  size="small"
+                                  sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                      height: "40px",
+                                      fontSize: "14px",
+                                      "& fieldset": {
+                                        borderColor: "#d1d5db",
+                                      },
+                                      "&:hover fieldset": {
+                                        borderColor: "#9ca3af",
+                                      },
+                                      "&.Mui-focused fieldset": {
+                                        borderColor: "#3b82f6",
+                                        borderWidth: "2px",
+                                      },
+                                    },
+                                    "& .MuiInputBase-input": {
+                                      color: "#374151",
+                                      fontSize: "14px",
+                                    },
+                                  }}
+                                />
+                              )}
+                              renderOption={(props, option) => (
+                                <li {...props} key={option._id}>
+                                  {option.name}
+                                </li>
+                              )}
+                              sx={{ width: "100%" }}
+                              ListboxProps={{
+                                style: {
+                                  maxHeight: "200px",
+                                },
+                              }}
+                            />
+                            <span className="text-sm text-red-600">
+                              {errors.dispatcher &&
+                                touched.dispatcher &&
+                                errors.dispatcher}
+                            </span>
+                          </div>
+                        )}
+                        <div className="col-span-1 md:col-span-3">
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Address
+                            Description
                           </label>
-                          <TextField
-                            sx={{
-                              "& .MuiOutlinedInput-root": {
-                                height: "40px",
-                                fontSize: "14px",
-                                "& fieldset": {
-                                  borderColor: "#d1d5db",
-                                },
-                                "&:hover fieldset": {
-                                  borderColor: "#9ca3af",
-                                },
-                                "&.Mui-focused fieldset": {
-                                  borderColor: "#3b82f6",
-                                  borderWidth: "2px",
-                                },
-                              },
-                              "& .MuiInputBase-input": {
-                                color: "#374151",
-                                fontSize: "14px",
-                              },
-                            }}
-                            type="text"
-                            name="pickupLocation.address"
-                            value={values.pickupLocation.address}
+                          <textarea
+                            name="description"
+                            value={values.description}
                             onChange={handleChange}
-                            placeholder="Address"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                            placeholder="Item Description"
+                            rows="3"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none text-sm text-gray-700"
                           />
                           <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.address &&
-                              touched.pickupLocation?.address &&
-                              errors.pickupLocation.address}
-                          </span>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            City
-                          </label>
-                          <Autocomplete
-                            value={values.pickupLocation.city}
-                            onChange={(event, newValue) =>
-                              setFieldValue(
-                                "pickupLocation.city",
-                                newValue || ""
-                              )
-                            }
-                            options={allCities}
-                            freeSolo={false}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                placeholder="Select or type city"
-                                variant="outlined"
-                                size="small"
-                                sx={{
-                                  "& .MuiOutlinedInput-root": {
-                                    height: "40px",
-                                    fontSize: "14px",
-                                    "& fieldset": {
-                                      borderColor: "#d1d5db",
-                                    },
-                                    "&:hover fieldset": {
-                                      borderColor: "#9ca3af",
-                                    },
-                                    "&.Mui-focused fieldset": {
-                                      borderColor: "#3b82f6",
-                                      borderWidth: "2px",
-                                    },
-                                  },
-                                  "& .MuiInputBase-input": {
-                                    color: "#374151",
-                                    fontSize: "14px",
-                                  },
-                                }}
-                              />
-                            )}
-                            sx={{ width: "100%", maxWidth: "220px" }}
-                          />
-                          <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.city &&
-                              touched.pickupLocation?.city &&
-                              errors.pickupLocation.city}
-                          </span>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            State
-                          </label>
-                          <Autocomplete
-                            value={values.pickupLocation.state}
-                            onChange={(event, newValue) =>
-                              setFieldValue(
-                                "pickupLocation.state",
-                                newValue || ""
-                              )
-                            }
-                            options={allStates}
-                            freeSolo={false}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                placeholder="Select or type state"
-                                variant="outlined"
-                                size="small"
-                                sx={{
-                                  "& .MuiOutlinedInput-root": {
-                                    height: "40px",
-                                    fontSize: "14px",
-                                    "& fieldset": {
-                                      borderColor: "#d1d5db",
-                                    },
-                                    "&:hover fieldset": {
-                                      borderColor: "#9ca3af",
-                                    },
-                                    "&.Mui-focused fieldset": {
-                                      borderColor: "#3b82f6",
-                                      borderWidth: "2px",
-                                    },
-                                  },
-                                  "& .MuiInputBase-input": {
-                                    color: "#374151",
-                                    fontSize: "14px",
-                                  },
-                                }}
-                              />
-                            )}
-                            sx={{ width: "100%", maxWidth: "220px" }}
-                          />
-                          <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.state &&
-                              touched.pickupLocation?.state &&
-                              errors.pickupLocation.state}
-                          </span>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Zipcode
-                          </label>
-                          <TextField
-                            sx={{
-                              "& .MuiOutlinedInput-root": {
-                                height: "40px",
-                                fontSize: "14px",
-                                "& fieldset": {
-                                  borderColor: "#d1d5db",
-                                },
-                                "&:hover fieldset": {
-                                  borderColor: "#9ca3af",
-                                },
-                                "&.Mui-focused fieldset": {
-                                  borderColor: "#3b82f6",
-                                  borderWidth: "2px",
-                                },
-                              },
-                              "& .MuiInputBase-input": {
-                                color: "#374151",
-                                fontSize: "14px",
-                              },
-                            }}
-                            type="text"
-                            name="pickupLocation.zipcode"
-                            value={values.pickupLocation.zipcode}
-                            onChange={handleChange}
-                            placeholder="Zipcode"
-                            maxLength={5}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                          />
-                          <span className="text-sm text-red-600">
-                            {errors.pickupLocation?.zipcode &&
-                              touched.pickupLocation?.zipcode &&
-                              errors.pickupLocation.zipcode}
+                            {errors.description &&
+                              touched.description &&
+                              errors.description}
                           </span>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Submit Button */}
-                    <div className="flex justify-start">
-                      <button
-                        type="submit"
-                        className="bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors"
-                      >
-                        {selectedItem ? "Update Item" : "Create Item"}
-                      </button>
+                      {/* Pickup Location Section */}
+                      <div className="mb-6">
+                        <h3 className="text-md font-semibold text-[#003C72] mb-3">
+                          Pickup Location
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Address
+                            </label>
+                            <TextField
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                              type="text"
+                              name="pickupLocation.address"
+                              value={values.pickupLocation.address}
+                              onChange={handleChange}
+                              placeholder="Address"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                            />
+                            <span className="text-sm text-red-600">
+                              {errors.pickupLocation?.address &&
+                                touched.pickupLocation?.address &&
+                                errors.pickupLocation.address}
+                            </span>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              City
+                            </label>
+                            <Autocomplete
+                              value={values.pickupLocation.city}
+                              onChange={(event, newValue) =>
+                                setFieldValue(
+                                  "pickupLocation.city",
+                                  newValue || ""
+                                )
+                              }
+                              options={allCities}
+                              freeSolo={false}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  placeholder="Select or type city"
+                                  variant="outlined"
+                                  size="small"
+                                  sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                      height: "40px",
+                                      fontSize: "14px",
+                                      "& fieldset": {
+                                        borderColor: "#d1d5db",
+                                      },
+                                      "&:hover fieldset": {
+                                        borderColor: "#9ca3af",
+                                      },
+                                      "&.Mui-focused fieldset": {
+                                        borderColor: "#3b82f6",
+                                        borderWidth: "2px",
+                                      },
+                                    },
+                                    "& .MuiInputBase-input": {
+                                      color: "#374151",
+                                      fontSize: "14px",
+                                    },
+                                  }}
+                                />
+                              )}
+                              sx={{ width: "100%", maxWidth: "220px" }}
+                            />
+                            <span className="text-sm text-red-600">
+                              {errors.pickupLocation?.city &&
+                                touched.pickupLocation?.city &&
+                                errors.pickupLocation.city}
+                            </span>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              State
+                            </label>
+                            <Autocomplete
+                              value={values.pickupLocation.state}
+                              onChange={(event, newValue) =>
+                                setFieldValue(
+                                  "pickupLocation.state",
+                                  newValue || ""
+                                )
+                              }
+                              options={allStates}
+                              freeSolo={false}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  placeholder="Select or type state"
+                                  variant="outlined"
+                                  size="small"
+                                  sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                      height: "40px",
+                                      fontSize: "14px",
+                                      "& fieldset": {
+                                        borderColor: "#d1d5db",
+                                      },
+                                      "&:hover fieldset": {
+                                        borderColor: "#9ca3af",
+                                      },
+                                      "&.Mui-focused fieldset": {
+                                        borderColor: "#3b82f6",
+                                        borderWidth: "2px",
+                                      },
+                                    },
+                                    "& .MuiInputBase-input": {
+                                      color: "#374151",
+                                      fontSize: "14px",
+                                    },
+                                  }}
+                                />
+                              )}
+                              sx={{ width: "100%", maxWidth: "220px" }}
+                            />
+                            <span className="text-sm text-red-600">
+                              {errors.pickupLocation?.state &&
+                                touched.pickupLocation?.state &&
+                                errors.pickupLocation.state}
+                            </span>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Zipcode
+                            </label>
+                            <TextField
+                              sx={{
+                                "& .MuiOutlinedInput-root": {
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  "& fieldset": {
+                                    borderColor: "#d1d5db",
+                                  },
+                                  "&:hover fieldset": {
+                                    borderColor: "#9ca3af",
+                                  },
+                                  "&.Mui-focused fieldset": {
+                                    borderColor: "#3b82f6",
+                                    borderWidth: "2px",
+                                  },
+                                },
+                                "& .MuiInputBase-input": {
+                                  color: "#374151",
+                                  fontSize: "14px",
+                                },
+                              }}
+                              type="tel"
+                              name="pickupLocation.zipcode"
+                              value={values.pickupLocation.zipcode}
+                              onChange={(e) => {
+                                const regex = /^[0-9\b]+$/;
+                                if (
+                                  e.target.value === "" ||  
+                                  (regex.test(e.target.value) &&
+                                    e.target.value.length <= 5)
+                                ) {
+                                  handleChange(e);
+                                }
+                              }}
+                              placeholder="Zipcode"
+                              inputProps={{ maxLength: 5 }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                            />
+                            <span className="text-sm text-red-600">
+                              {errors.pickupLocation?.zipcode &&
+                                touched.pickupLocation?.zipcode &&
+                                errors.pickupLocation.zipcode}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="flex justify-start">
+                        <button
+                          type="submit"
+                          className="bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors"
+                        >
+                          {selectedItem ? "Update Item" : "Create Item"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </form>
+                  </form>
                 );
               }}
             </Formik>
@@ -1204,6 +1217,20 @@ function Items({ loader, user }) {
           </div>
         </div>
       )}
+
+      {/* Dynamic Dialog Component */}
+      <Dialog
+        open={dialogConfig.open}
+        type={dialogConfig.type}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={closeDialog}
+        onClose={closeDialog}
+        customIcon={dialogConfig.customIcon}
+      />
     </Layout>
   );
 }

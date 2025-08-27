@@ -73,7 +73,7 @@ export default function NewInvoice() {
               <label className="block text-sm text-gray-800 mb-1">Email</label>
               <input
                 className="w-full rounded border px-3 py-2 text-sm text-black border-gray-200 h-10"
-                placeholder="Enter email"
+                placeholder="Enter your email"
               />
             </div>
           </div>

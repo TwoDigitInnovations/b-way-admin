@@ -176,7 +176,7 @@ const OrderNotificationTest = () => {
         <div className="mb-3">
           <span className="text-sm text-gray-600 block mb-2">Test as Role:</span>
           <div className="flex gap-2">
-            {['ADMIN', 'CLIENT', 'HOSPITAL'].map(role => (
+            {['ADMIN', 'CLIENT', 'HOSPITAL', 'CLINIC'].map(role => (
               <button
                 key={role}
                 onClick={() => testJoinRoom(role)}

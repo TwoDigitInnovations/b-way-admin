@@ -13,6 +13,10 @@ import {
   ChevronDown,
   Clock,
   Trash,
+  Send,
+  Package,
+  Plus,
+  Minus,
 } from "lucide-react";
 import Sidebar from "@/components/sidebar";
 import Header from "@/components/header";
@@ -42,7 +46,7 @@ function Orders({ loader, user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  
+
   // Dialog states
   const [dialogConfig, setDialogConfig] = useState({
     open: false,
@@ -83,6 +87,10 @@ function Orders({ loader, user }) {
     useState(allStates);
   const [filteredItems, setFilteredItems] = useState([]);
 
+  // Totes Modal States
+  const [showTotesModal, setShowTotesModal] = useState(false);
+  const [totes, setTotes] = useState([{ toteNumber: "", itemCount: "" }]);
+
   useEffect(() => {
     dispatch(fetchRoutes({ page: 0, limit: 0 }));
     dispatch(fetchItems());
@@ -109,6 +117,18 @@ function Orders({ loader, user }) {
       .required("Quantity is required")
       .min(1, "Must be at least 1")
       .positive("Quantity must be positive"),
+    deliveryUrgency: Yup.string().notRequired(),
+    scheduledDateTime: Yup.string().when("deliveryUrgency", {
+      is: "Scheduled",
+      then: (schema) =>
+        schema.required(
+          "Scheduled date/time is required for scheduled delivery"
+        ),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+    temperatureRequirements: Yup.string().notRequired(),
+    hipaaFdaCompliance: Yup.string().notRequired(),
+    description: Yup.string().notRequired(),
     pickupLocation: Yup.object({
       address: Yup.string().required("Pickup address is required"),
       city: Yup.string().required("Pickup city is required"),
@@ -139,6 +159,11 @@ function Orders({ loader, user }) {
     const orderData = {
       items: values.items,
       qty: parseInt(values.qty, 10),
+      deliveryUrgency: values.deliveryUrgency,
+      scheduledDateTime: values.scheduledDateTime,
+      temperatureRequirements: values.temperatureRequirements,
+      hipaaFdaCompliance: values.hipaaFdaCompliance,
+      description: values.description,
       pickupLocation: {
         address: values.pickupLocation.address,
         city: values.pickupLocation.city,
@@ -194,7 +219,7 @@ function Orders({ loader, user }) {
         handleEditClick(order);
       },
     },
-    ...(user.role === "ADMIN"
+    ...(user.role === "ADMIN" || user.role === "DISPATCHER"
       ? [
           {
             label: "Assign Route",
@@ -202,7 +227,7 @@ function Orders({ loader, user }) {
             command: () => {
               console.log("Assign clicked", order);
               handleAssign(order);
-            },  
+            },
           },
         ]
       : []),
@@ -225,6 +250,18 @@ function Orders({ loader, user }) {
         handleDownloadReturnLoad(order);
       },
     },
+    ...(user.role === "ADMIN" || user.role === "DISPATCHER"
+      ? [
+          {
+            label: "Add Totes",
+            icon: <Package className="w-5 h-5 text-gray-500" />,
+            command: () => {
+              console.log("Add Totes clicked", order);
+              handleAddTotes(order);
+            },
+          },
+        ]
+      : []),
     ...(user.role === "ADMIN"
       ? [
           {
@@ -320,7 +357,9 @@ function Orders({ loader, user }) {
       open: true,
       type: "danger",
       title: "Delete Order",
-      message: `Are you sure you want to delete order #${order.orderId || order._id}? This action cannot be undone.`,
+      message: `Are you sure you want to delete order #${
+        order.orderId || order._id
+      }? This action cannot be undone.`,
       confirmText: "Delete",
       cancelText: "Cancel",
       onConfirm: () => handleDeleteOrder(order._id),
@@ -333,7 +372,9 @@ function Orders({ loader, user }) {
       open: true,
       type: "warning",
       title: "Create Return",
-      message: `Are you sure you want to create a return for order #${order.orderId || order._id}? This will initiate the return process.`,
+      message: `Are you sure you want to create a return for order #${
+        order.orderId || order._id
+      }? This will initiate the return process.`,
       confirmText: "Create Return",
       cancelText: "Cancel",
       onConfirm: () => handleCreateReturn(order),
@@ -383,7 +424,9 @@ function Orders({ loader, user }) {
       open: true,
       type: "info",
       title: "Download Return Load",
-      message: `Are you sure you want to download the return load for order #${order.orderId || order._id}?`,
+      message: `Are you sure you want to download the return load for order #${
+        order.orderId || order._id
+      }?`,
       confirmText: "Download",
       cancelText: "Cancel",
       onConfirm: () => {
@@ -397,7 +440,7 @@ function Orders({ loader, user }) {
   };
 
   const closeDialog = () => {
-    setDialogConfig(prev => ({ ...prev, open: false }));
+    setDialogConfig((prev) => ({ ...prev, open: false }));
   };
 
   const handleAssign = (order) => {
@@ -439,6 +482,86 @@ function Orders({ loader, user }) {
         setAssignModal(false);
         setSelectedRoute("");
       });
+  };
+
+  const handleAddTotes = (order) => {
+    setSelectedOrder(order);
+    
+    // Load existing totes if they exist, otherwise start with one empty tote
+    if (order.totes && order.totes.length > 0) {
+      setTotes(order.totes.map(tote => ({
+        toteNumber: tote.toteNumber,
+        itemCount: tote.itemCount.toString(),
+        isExisting: true // Flag to identify existing totes
+      })));
+    } else {
+      setTotes([{ toteNumber: "", itemCount: "", isExisting: false }]);
+    }
+    
+    setShowTotesModal(true);
+  };
+
+  const addTote = () => {
+    setTotes([...totes, { toteNumber: "", itemCount: "", isExisting: false }]);
+  };
+
+  const removeTote = (index) => {
+    if (totes.length > 1) {
+      const updatedTotes = totes.filter((_, i) => i !== index);
+      setTotes(updatedTotes);
+    }
+  };
+
+  const updateTote = (index, field, value) => {
+    const updatedTotes = totes.map((tote, i) =>
+      i === index ? { ...tote, [field]: value } : tote
+    );
+    setTotes(updatedTotes);
+  };
+
+  const saveTotes = async () => {
+    // Validate totes
+    const invalidTotes = totes.some(
+      (tote) => !tote.toteNumber || !tote.itemCount
+    );
+    if (invalidTotes) {
+      toast.error("Please fill in all tote numbers and item counts");
+      return;
+    }
+
+    // Check for duplicate tote numbers
+    const toteNumbers = totes.map((tote) => tote.toteNumber);
+    const duplicates = toteNumbers.filter(
+      (item, index) => toteNumbers.indexOf(item) !== index
+    );
+    if (duplicates.length > 0) {
+      toast.error("Duplicate tote numbers are not allowed");
+      return;
+    }
+
+    loader(true);
+    try {
+      const response = await Api(
+        "PUT",
+        `/order/${selectedOrder._id}/totes`,
+        { totes },
+        router
+      );
+      if (response?.status) {
+        toast.success("Totes added successfully");
+        setShowTotesModal(false);
+        setSelectedOrder(null);
+        setTotes([{ toteNumber: "", itemCount: "" }]);
+        fetchOrders(false); // Refresh orders
+      } else {
+        toast.error("Failed to add totes");
+      }
+    } catch (error) {
+      console.error("Error adding totes:", error);
+      toast.error("Error adding totes");
+    } finally {
+      loader(false);
+    }
   };
 
   useEffect(() => {
@@ -485,6 +608,50 @@ function Orders({ loader, user }) {
 
   const handlePageChange = (event) => {
     setCurrentPage(event.page + 1);
+  };
+
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    if (!orderId || !newStatus) return;
+
+    loader(true);
+    await Api("PUT", `/order/${orderId}`, { status: newStatus }, router)
+      .then((response) => {
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order._id === orderId ? { ...order, status: newStatus } : order
+          )
+        );
+        console.log(response);
+        toast.success("Order status updated successfully");
+        fetchOrders(false);
+      })
+      .catch((error) => {
+        console.error("Error updating order status:", error);
+        toast.error("Error updating order status");
+      })
+      .finally(() => {
+        loader(false);
+      });
+    // try {
+    //   const response = await Api("PUT", `/order/${orderId}`, { status: newStatus }, router);
+    //   console.log(response)
+    //   if (response?.status) {
+    //     setOrders(prevOrders =>
+    //       prevOrders.map(order =>
+    //         order._id === orderId ? { ...order, status: newStatus } : order
+    //       )
+    //     );
+    //     toast.success("Order status updated successfully");
+    //     fetchOrders(false); // false to not show loader again
+    //   } else {
+    //     toast.error("Failed to update order status");
+    //   }
+    // } catch (error) {
+    //   console.error("Error updating order status:", error);
+    //   toast.error("Error updating order status");
+    // } finally {
+    //   loader(false);
+    // }
   };
 
   const getStatusBadge = (status) => {
@@ -669,17 +836,89 @@ function Orders({ loader, user }) {
             header="Item(s)"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
-              <span>
-                {Array.isArray(rowData.items)
-                  ? rowData.items.map((item) => item?.name).join(", ")
-                  : rowData.items?.name || "N/A"}
-              </span>
+              <div className="flex items-center space-x-2">
+                <span>
+                  {Array.isArray(rowData.items)
+                    ? rowData.items.map((item) => item?.name).join(", ")
+                    : rowData.items?.name || "N/A"}
+                </span>
+              </div>
             )}
           />
           <Column
             field="qty"
             header="Qty"
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+          />
+          <Column
+            field="totes"
+            header="Tote Numbers"
+            bodyStyle={{
+              verticalAlign: "middle",
+              fontSize: "14px",
+              textAlign: "center",
+            }}
+            headerStyle={{
+              textAlign: "center",
+            }}
+            body={(rowData) => (
+              <div className="text-gray-600">
+                {rowData.totes && rowData.totes.length > 0 ? (
+                  <div className="space-y-1">
+                    {rowData.totes.map((tote, index) => (
+                      <div key={index} className="text-sm">
+                        #{tote.toteNumber}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-400">No totes</span>
+                )}
+              </div>
+            )}
+          />
+          <Column
+            field="totes"
+            header="Tote Item Qty"
+            bodyStyle={{
+              verticalAlign: "middle",
+              fontSize: "14px",
+              textAlign: "center",
+            }}
+            headerStyle={{
+              textAlign: "center",
+            }}
+            body={(rowData) => (
+              <div className="text-gray-600">
+                {rowData.totes && rowData.totes.length > 0 ? (
+                  <span className="text-sm font-medium text-blue-600">
+                    {rowData.totes.reduce((sum, tote) => sum + (parseInt(tote.itemCount) || 0), 0)}
+                  </span>
+                ) : (
+                  <span className="text-gray-400">-</span>
+                )}
+              </div>
+            )}
+          />
+          <Column
+            field="deliveryUrgency"
+            header="Urgency"
+            bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
+            body={(rowData) => (
+              <span
+                className={`px-2 py-1 text-xs rounded ${
+                  rowData.deliveryUrgency === "Stat"
+                    ? "bg-red-100 text-red-800 border border-red-200"
+                    : rowData.deliveryUrgency === "Same-Day"
+                    ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                    : rowData.deliveryUrgency === "Scheduled"
+                    ? "bg-blue-100 text-blue-800 border border-blue-200"
+                    : "bg-gray-100 text-gray-800 border border-gray-200"
+                }`}
+              >
+                {rowData.deliveryUrgency || "Stat"}
+              </span>
+            )}
           />
           <Column
             field="pickupLocation"
@@ -718,8 +957,44 @@ function Orders({ loader, user }) {
           <Column
             field="status"
             header="Status"
-            body={(rowData) => getStatusBadge(rowData.status)}
-            style={{ width: "80px" }}
+            body={(rowData) => (
+              <div className="relative">
+                {user?.role === "ADMIN" || user?.role === "DISPATCHER" ? (
+                  <select
+                    value={rowData.status}
+                    onChange={(e) =>
+                      handleStatusUpdate(rowData._id, e.target.value)
+                    }
+                    className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap border-none outline-none cursor-pointer ${
+                      rowData.status === "Cancelled"
+                        ? "bg-red-100 text-red-800 border border-red-200"
+                        : rowData.status === "Delivered"
+                        ? "bg-green-100 text-green-800 border border-green-200"
+                        : rowData.status === "Picked Up"
+                        ? "bg-blue-100 text-blue-800 border border-blue-200"
+                        : rowData.status === "Scheduled"
+                        ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                        : rowData.status === "Return Created"
+                        ? "bg-teal-100 text-teal-800 border border-teal-200"
+                        : rowData.status === "Invoice Generated"
+                        ? "bg-green-100 text-green-800 border border-green-200"
+                        : "bg-gray-100 text-gray-800 border border-gray-200"
+                    }`}
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Scheduled">Scheduled</option>
+                    <option value="Picked Up">Picked Up</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Return Created">Return Created</option>
+                    <option value="Invoice Generated">Invoice Generated</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                ) : (
+                  getStatusBadge(rowData.status)
+                )}
+              </div>
+            )}
+            style={{ width: "120px" }}
           />
           <Column
             field="eta"
@@ -808,6 +1083,12 @@ function Orders({ loader, user }) {
                   ? selectedOrder.items[0]?._id || ""
                   : selectedOrder?.items?._id || selectedOrder?.items || "",
                 qty: selectedOrder?.qty || "",
+                deliveryUrgency: selectedOrder?.deliveryUrgency || "",
+                scheduledDateTime: selectedOrder?.scheduledDateTime || "",
+                temperatureRequirements:
+                  selectedOrder?.temperatureRequirements || "",
+                hipaaFdaCompliance: selectedOrder?.hipaaFdaCompliance || "",
+                description: selectedOrder?.description || "",
                 pickupLocation: {
                   address: selectedOrder?.pickupLocation?.address || "",
                   city: selectedOrder?.pickupLocation?.city || "",
@@ -905,6 +1186,97 @@ function Orders({ loader, user }) {
                         </span>
                       </div>
                     </div>
+
+                    {/* Additional Order Details Section */}
+                    <div className="mb-6">
+                      <h3 className="text-md font-semibold text-[#003C72] mb-3">
+                        Order Preferences
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Delivery Urgency
+                          </label>
+                          <select
+                            name="deliveryUrgency"
+                            value={values.deliveryUrgency}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          >
+                            <option value="">Select Urgency</option>
+                            <option value="Stat">STAT</option>
+                            <option value="Same-Day">Same-Day</option>
+                            <option value="Scheduled">Scheduled</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Temperature Requirements
+                          </label>
+                          <select
+                            name="temperatureRequirements"
+                            value={values.temperatureRequirements}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          >
+                            <option value="">Select Temperature</option>
+                            <option value="Controlled">Controlled</option>
+                            <option value="Room Temperature">
+                              Room Temperature
+                            </option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            HIPAA / FDA Compliance
+                          </label>
+                          <select
+                            name="hipaaFdaCompliance"
+                            value={values.hipaaFdaCompliance}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          >
+                            <option value="">Select Compliance</option>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                          </select>
+                        </div>
+                      </div>
+                      {values.deliveryUrgency === "Scheduled" && (
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Scheduled Date & Time
+                          </label>
+                          <input
+                            type="datetime-local"
+                            name="scheduledDateTime"
+                            value={
+                              values.scheduledDateTime
+                                ? new Date(values.scheduledDateTime)
+                                    .toISOString()
+                                    .slice(0, 16)
+                                : ""
+                            }
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                          />
+                        </div>
+                      )}
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Description
+                        </label>
+                        <textarea
+                          name="description"
+                          value={values.description}
+                          onChange={handleChange}
+                          placeholder="Enter order description..."
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                        />
+                      </div>
+                    </div>
+
                     {/* Pickup Location Section */}
                     <div className="mb-6">
                       <h3 className="text-md font-semibold text-[#003C72] mb-3">
@@ -1206,7 +1578,10 @@ function Orders({ loader, user }) {
       )}
 
       {viewModal && selectedOrder && (
-        <Modal open={viewModal} className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <Modal
+          open={viewModal}
+          className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50"
+        >
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">
@@ -1261,6 +1636,54 @@ function Orders({ loader, user }) {
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                       {selectedOrder.qty || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Delivery Urgency
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder.deliveryUrgency || "N/A"}
+                      {selectedOrder.deliveryUrgency === "Scheduled" &&
+                        selectedOrder.scheduledDateTime && (
+                          <div className="text-xs text-primary mt-1">
+                            Scheduled for:{" "}
+                            {new Date(
+                              selectedOrder.scheduledDateTime
+                            ).toLocaleString("en-US", {
+                              month: "numeric",
+                              day: "numeric",
+                              year: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
+                          </div>
+                        )}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Temperature Requirements
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder.temperatureRequirements || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      HIPAA / FDA Compliance
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder.hipaaFdaCompliance || "N/A"}
+                    </dd>
+                  </div>
+                  <div className="col-span-2 py-3 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 border-b border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500">
+                      Description
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                      {selectedOrder.description || "N/A"}
                     </dd>
                   </div>
                   <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-2">
@@ -1350,6 +1773,52 @@ function Orders({ loader, user }) {
                       {selectedOrder?.eta || "N/A"}
                     </dd>
                   </div>
+                  {selectedOrder?.totes && selectedOrder.totes.length > 0 && (
+                    <>
+                      <h2 className="col-span-6 text-md font-semibold text-[#003C72] py-3">
+                        Totes Information
+                      </h2>
+                      <div className="col-span-6 pb-3 sm:px-6">
+                        <div className="space-y-2">
+                          {selectedOrder.totes.map((tote, index) => (
+                            <div
+                              key={index}
+                              className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                            >
+                              <span className="font-medium text-gray-700">
+                                Tote #{tote.toteNumber}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                {tote.itemCount} items
+                              </span>
+                            </div>
+                          ))}
+                          <div className="mt-2 p-2 bg-blue-50 rounded-lg">
+                            <div className="flex justify-between text-sm">
+                              <span className="font-medium text-blue-800">
+                                Total Totes:
+                              </span>
+                              <span className="text-blue-600">
+                                {selectedOrder.totes.length}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="font-medium text-blue-800">
+                                Total Items:
+                              </span>
+                              <span className="text-blue-600">
+                                {selectedOrder.totes.reduce(
+                                  (sum, tote) =>
+                                    sum + (parseInt(tote.itemCount) || 0),
+                                  0
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </dl>
               </div>
 
@@ -1371,6 +1840,7 @@ function Orders({ loader, user }) {
                 onClick={() => {
                   setAssignModal(false);
                   setSelectedOrder(null);
+                  setSelectedRoute(null);
                 }}
                 className="p-2 hover:bg-gray-100 rounded-full"
               >
@@ -1418,6 +1888,139 @@ function Orders({ loader, user }) {
                     Assign Route
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Totes Modal */}
+      {showTotesModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Manage Totes for Order #{selectedOrder.orderId}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowTotesModal(false);
+                  setSelectedOrder(null);
+                  setTotes([{ toteNumber: "", itemCount: "", isExisting: false }]);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-6">
+              <div className="space-y-4">
+                {totes.map((tote, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-center space-x-4 p-4 border rounded-lg ${
+                      tote.isExisting 
+                        ? "border-blue-200 bg-blue-50" 
+                        : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Tote #{index + 1} Number
+                        </label>
+                        {tote.isExisting && (
+                          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                            Existing
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={tote.toteNumber}
+                        onChange={(e) =>
+                          updateTote(index, "toteNumber", e.target.value)
+                        }
+                        placeholder="Enter tote number"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Item Count
+                      </label>
+                      <input
+                        type="number"
+                        value={tote.itemCount}
+                        onChange={(e) =>
+                          updateTote(index, "itemCount", e.target.value)
+                        }
+                        placeholder="Enter item count"
+                        min="1"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
+                      />
+                    </div>
+                    {totes.length > 1 && (
+                      <button
+                        onClick={() => removeTote(index)}
+                        className={`p-2 hover:bg-red-50 rounded-full ${
+                          tote.isExisting ? "text-red-600" : "text-red-500"
+                        }`}
+                        title={tote.isExisting ? "Remove existing tote" : "Remove tote"}
+                      >
+                        <Minus className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Tote Button */}
+              <div className="mt-4">
+                <button
+                  onClick={addTote}
+                  className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium text-gray-700"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Another Tote</span>
+                </button>
+              </div>
+
+              {/* Summary */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <div>Total Totes: {totes.length}</div>
+                  <div>
+                    Total Items:{" "}
+                    {totes.reduce(
+                      (sum, tote) => sum + (parseInt(tote.itemCount) || 0),
+                      0
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowTotesModal(false);
+                    setSelectedOrder(null);
+                    setTotes([{ toteNumber: "", itemCount: "" }]);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveTotes}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Save Totes
+                </button>
               </div>
             </div>
           </div>

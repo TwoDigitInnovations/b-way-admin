@@ -241,17 +241,17 @@ export const SocketProvider = ({ children }) => {
       });
       
       const routeName = data.route?.routeName || data.route || 'Route';
-      toast.success(`🚛 Route "${routeName}" assigned to order ${data.order.orderId}`, {
-        duration: 6000,
-        position: 'top-right',
-        style: {
-          background: '#059669',
-          color: 'white',
-          fontWeight: 'bold',
-          border: '2px solid #10B981',
-        },
-        icon: '🚛',
-      });
+      // toast.success(`🚛 Route "${routeName}" assigned to order ${data.order.orderId}`, {
+      //   duration: 6000,
+      //   position: 'top-right',
+      //   style: {
+      //     background: '#059669',
+      //     color: 'white',
+      //     fontWeight: 'bold',
+      //     border: '2px solid #10B981',
+      //   },
+      //   icon: '🚛',
+      // });
     });
 
     socketInstance.on('route_assigned', (data) => {

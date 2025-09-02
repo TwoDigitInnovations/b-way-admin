@@ -15,6 +15,7 @@ import {
   DeleteIcon,
   Trash,
   Map,
+  User,
 } from "lucide-react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -43,6 +44,7 @@ import {
   TextField,
   Chip,
   Box,
+  Checkbox,
 } from "@mui/material";
 import { fetchHospital } from "@/store/hospitalSlice";
 import Dialog from "@/components/Dialog";
@@ -113,6 +115,10 @@ function RoutesSchedules({ loader }) {
   const [selectedRowData, setSelectedRowData] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
+  const [assignModal, setAssignModal] = useState(false);
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [selectedRoute, setSelectedRoute] = useState(null);
+
   const dispatch = useDispatch();
   const routes = useSelector(selectRoutes);
   const totalPages = useSelector(selectTotal);
@@ -303,8 +309,14 @@ function RoutesSchedules({ loader }) {
     });
   };
 
+  const openAssignTempDriverModal = (route) => {
+    setAssignModal(true);
+    setSelectedRoute(route);
+    console.log("Assign Temp Driver clicked", route);
+  };
+
   const closeDialog = () => {
-    setDialogConfig(prev => ({ ...prev, open: false }));
+    setDialogConfig((prev) => ({ ...prev, open: false }));
   };
 
   const toggleDropdown = (index) => {
@@ -366,6 +378,14 @@ function RoutesSchedules({ loader }) {
       },
     },
     {
+      label: "Assign Temp Driver",
+      icon: <UserPlus className="w-5 h-5 text-gray-500" />,
+      command: () => {
+        console.log("Assign Temp Driver clicked", row);
+        openAssignTempDriverModal(row);
+      },
+    },
+    {
       label: "Delete",
       icon: <Trash className="w-5 h-5 text-gray-500" />,
       command: () => {
@@ -374,6 +394,31 @@ function RoutesSchedules({ loader }) {
       },
     },
   ];
+
+  const assignTempDriver = async () => {
+    if (!selectedRoute || !selectedDriver) return;
+
+    const data = {
+      driverId: selectedDriver,
+      routeId: selectedRoute._id
+    }
+
+    try {
+      const response = await Api("POST", `/route/assign-temp-driver`, data);
+      if (response?.status) {
+        toast.success("Temporary driver assigned successfully!");
+        setAssignModal(false);
+        setSelectedRoute(null);
+        setSelectedDriver(null);
+        fetchRoutes();
+      } else {
+        toast.error("Failed to assign temporary driver. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error assigning temporary driver:", error);
+      toast.error("An error occurred while assigning the temporary driver.");
+    }
+  };
 
   React.useEffect(() => {
     document.addEventListener("click", handleClickOutside);
@@ -474,9 +519,9 @@ function RoutesSchedules({ loader }) {
             bodyStyle={{ verticalAlign: "middle", fontSize: "14px" }}
             body={(rowData) => (
               <span>
-                {rowData.assignedDriver
-                  ? rowData.assignedDriver?.driver?.name || "N/A"
-                  : "N/A"}
+                {rowData.assignedDriver?.driver?.name
+                  || rowData.temporaryDriver?.driver?.driver?.name
+                  || "N/A"}
               </span>
             )}
           />
@@ -1185,7 +1230,7 @@ function RoutesSchedules({ loader }) {
                                 </span>
                               </MenuItem>
                               {drivers.map((driver) => (
-                                <MenuItem key={driver._id} value={driver._id}>
+                                <MenuItem key={driver.driver._id} value={driver.driver._id}>
                                   {driver.driver.name}
                                 </MenuItem>
                               ))}
@@ -1279,45 +1324,59 @@ function RoutesSchedules({ loader }) {
                               multiple
                               MenuProps={MenuProps}
                               value={field.value || []}
-                              renderValue={(selected) => {
-                                if (selected.length === 0) {
-                                  return (
-                                    <span style={{ color: "#9ca3af" }}>
-                                      Select Active Days
-                                    </span>
-                                  );
-                                }
-                                return (
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      flexWrap: "wrap",
-                                      gap: 0.5,
-                                    }}
-                                  >
-                                    {selected.map((value) => {
-                                      const dayName =
-                                        days.find((day) => day.value === value)
-                                          ?.name || value;
-                                      return (
-                                        <Chip
-                                          key={value}
-                                          label={dayName}
-                                          size="small"
-                                          sx={{
-                                            height: "24px",
-                                            fontSize: "12px",
-                                          }}
-                                        />
-                                      );
-                                    })}
-                                  </Box>
-                                );
-                              }}
+                              // renderValue={(selected) => {
+                              //   if (selected.length === 0) {
+                              //     return (
+                              //       <span style={{ color: "#9ca3af" }}>
+                              //         Select Active Days
+                              //       </span>
+                              //     );
+                              //   }
+                              //   return (
+                              //     <Box
+                              //       sx={{
+                              //         display: "flex",
+                              //         flexWrap: "wrap",
+                              //         gap: 0.5,
+                              //       }}
+                              //     >
+                              //       {selected.map((value) => {
+                              //         const dayName =
+                              //           days.find((day) => day.value === value)
+                              //             ?.name || value;
+                              //         return (
+                              //           <Chip
+                              //             key={value}
+                              //             label={dayName}
+                              //             size="small"
+                              //             sx={{
+                              //               height: "24px",
+                              //               fontSize: "12px",
+                              //             }}
+                              //           />
+                              //         );
+                              //       })}
+                              //     </Box>
+                              //   );
+                              // }}
+                              renderValue={(selected) => selected.join(", ")}
                               error={meta.touched && !!meta.error}
                             >
                               {days.map((day) => (
                                 <MenuItem key={day.value} value={day.value}>
+                                  <Checkbox
+                                    checked={field.value.includes(day.value)}
+                                    onChange={() => {
+                                      const newValue = field.value.includes(
+                                        day.value
+                                      )
+                                        ? field.value.filter(
+                                            (v) => v !== day.value
+                                          )
+                                        : [...field.value, day.value];
+                                      setFieldValue(field.name, newValue);
+                                    }}
+                                  />
                                   {day.name}
                                 </MenuItem>
                               ))}
@@ -1653,6 +1712,70 @@ function RoutesSchedules({ loader }) {
         onClose={closeDialog}
         customIcon={dialogConfig.customIcon}
       />
+
+      {/* Assign Temporary Driver */}
+      {assignModal && (
+        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Assign Temporary Driver
+              </h2>
+              <button
+                onClick={() => {
+                  setAssignModal(false);
+                  setSelectedRoute(null);
+                  setSelectedDriver(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <div className="grid gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Driver
+                  </label>
+                  <select
+                    name="driver"
+                    value={selectedDriver}
+                    onChange={(e) => setSelectedDriver(e.target.value)}
+                    disabled={loading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700 disabled:bg-gray-100"
+                  >
+                    <option value="">
+                      {loading ? "Loading drivers..." : "Select Driver"}
+                    </option>
+                    {drivers && drivers.length > 0
+                      ? drivers.map((item) => (
+                          <option key={item.driver._id} value={item.driver._id}>
+                            {item.driver.name}
+                          </option>
+                        ))
+                      : !loading && (
+                          <option value="" disabled>
+                            No drivers available
+                          </option>
+                        )}
+                  </select>
+                </div>
+
+                <div className="flex w-full">
+                  <button
+                    onClick={assignTempDriver}
+                    type="submit"
+                    className="bg-secondary w-full hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors"
+                  >
+                    Assign Driver
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

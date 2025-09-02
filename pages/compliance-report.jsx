@@ -37,7 +37,7 @@ import { MultiSelect } from "primereact/multiselect";
 import { InputTextarea } from "primereact/inputtextarea";
 import { FileUpload } from "primereact/fileupload";
 import Layout from "@/components/layout";
-import { Api } from "@/helper/service";
+import { Api, ApiGetPdf } from "@/helper/service";
 import CustomDialog from "@/components/Dialog";
 import toast from "react-hot-toast";
 import Box from "@mui/material/Box";
@@ -664,27 +664,30 @@ function Compliances({ loader }) {
   };
 
   const handleDownloadAudit = async (reportId) => {
-    try {
-      const response = await Api(
-        "get",
-        `/compliance/${reportId}/audit-package`
-      );
-      if (response.data) {
-        // Create and download JSON file
-        const dataStr = JSON.stringify(response.data.auditPackage, null, 2);
-        const dataBlob = new Blob([dataStr], { type: "application/json" });
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `compliance-audit-${reportId}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }
-    } catch (error) {
-      console.error("Error downloading audit package:", error);
-    }
+    // try {
+    //   const response = await Api(
+    //     "get",
+    //     `/compliance/${reportId}/audit-package`
+    //   );
+    //   if (response.data) {
+    //     // Create and download JSON file
+    //     const dataStr = JSON.stringify(response.data.auditPackage, null, 2);
+    //     const dataBlob = new Blob([dataStr], { type: "application/pdf" });
+    //     const url = URL.createObjectURL(dataBlob);
+    //     const link = document.createElement("a");
+    //     link.href = url;
+    //     link.download = `compliance-audit-${reportId}.pdf`;
+    //     document.body.appendChild(link);
+    //     link.click();
+    //     document.body.removeChild(link);
+    //     URL.revokeObjectURL(url);
+    //   }
+    // } catch (error) {
+    //   console.error("Error downloading audit package:", error);
+    // }
+    ApiGetPdf(`/compliance/${reportId}/audit-package/download?format=pdf`, null, null)
+      .then(() => console.log("PDF downloaded/opened successfully"))
+      .catch((err) => console.error("Failed to fetch PDF", err));
   };
 
   const getMenuItems = (row) => [

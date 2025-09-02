@@ -324,3 +324,27 @@ table .p-datatable-thead tr th {
 .css-er619e-MuiFormHelperText-root{
   margin-left: 0px !important;
 }
+
+.p-datepicker .p-datepicker-header{
+  padding: 0 !important;
+}
+
+.p-datepicker table th,
+.p-datepicker-calendar th{
+  padding: 2px !important;
+}
+
+.p-datepicker table td,
+.p-datepicker-calendar td{
+  padding: 2px !important;
+}
+
+.p-datepicker .p-timepicker span{
+  font-size: 16px !important;
+}
+
+.p-highlight {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  /* border-left: 4px solid rgba(59, 130, 246, 1); */
+  padding: 0.5rem 1rem;
+}

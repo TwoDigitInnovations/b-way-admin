@@ -329,12 +329,12 @@ function Dashboard({ user }) {
           orders={orders}
           loading={loading}
         />
-      ) : (
+      ) : activeTab === "investor" ? (
         <Investor
           totalDeliveryData={totalDeliveryData}
           customerLoyaltyData={customerLoyaltyData}
         />
-      )}
+      ) : null}
     </Layout>
   );
 }

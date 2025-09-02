@@ -41,7 +41,7 @@ const isAuth = (Component) => {
       CLIENT: ["/dashboard", "/orders", "/allroutes", "/settings", "/change-password", "/account-info"],
       HOSPITAL: ["/dashboard", "/orders", "/allroutes", "/settings", "/change-password", "/account-info"],
       DRIVER: ["/dashboard", "/orders", "/my-deliveries", "/change-password", "/account-info"],
-      DISPATCHER: ["/dashboard", "/orders", "/settings", "/billing-invoices", "/change-password", "/account-info"],
+      DISPATCHER: ["/dashboard", "/orders", "/settings", "/billing-invoices", "/change-password", "/account-info", "/allroutes", "/compliance-report", "/alldrivers"],
     };
 
     const currentRoute = router?.pathname;

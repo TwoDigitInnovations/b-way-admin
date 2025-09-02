@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Clock, PlusIcon, Trash2Icon } from "lucide-react";
 import Layout from "@/components/layout";
 import { Formik } from "formik";
@@ -10,27 +10,38 @@ import toast from "react-hot-toast";
 import { fetchItems } from "@/store/itemSlice";
 import { getStateAndCityPicklist, getStateByCity } from "@/utils/states";
 import { AutoComplete } from "primereact/autocomplete";
-import Dropdown from "@/components/dropDown";
+import { Calendar } from "primereact/calendar";
 import Link from "next/link";
+import { fetchHospital } from "@/store/hospitalSlice";
 
 export default function NewOrder({ loader, user }) {
   const [selectedItems, setSelectedItems] = useState([]);
+  const [selectedHospital, setSelectedHospital] = useState(null);
   const [currentItemInput, setCurrentItemInput] = useState("");
   const [currentQty, setCurrentQty] = useState("");
   const dispatch = useDispatch();
   const router = useRouter();
   const { items } = useSelector((state) => state.item);
+  const { hospitals } = useSelector((state) => state.hospital);
   const statesAndCities = getStateAndCityPicklist();
   const allCities = Object.values(statesAndCities).flat();
   const allStates = Object.keys(statesAndCities);
   const [filteredCities, setFilteredCities] = useState([]);
   const [filteredStates, setFilteredStates] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
+  const [filteredHospitals, setFilteredHospitals] = useState([]);
   const [selectedCurrentItem, setSelectedCurrentItem] = useState(null);
   const [maxQty, setMaxQty] = useState(0);
+  const [deliveryType, setDeliveryType] = useState("Stat");
+  const [temperatureRequirements, setTemperatureRequirements] =
+    useState("Controlled");
+  const [dateTime, setDateTime] = useState(null);
+  const [complianceAlert, setComplianceAlert] = useState(false);
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     dispatch(fetchItems());
+    dispatch(fetchHospital());
     // Initialize filtered cities and states with all options
     setFilteredCities(allCities);
     setFilteredStates(allStates);
@@ -63,6 +74,12 @@ export default function NewOrder({ loader, user }) {
       return;
     }
 
+    // Validate scheduled delivery has a date
+    if (deliveryType === "Scheduled" && !dateTime) {
+      toast.error("Please select a date and time for scheduled delivery");
+      return;
+    }
+
     const newItem = {
       id: Date.now(),
       itemId: selectedCurrentItem._id,
@@ -71,6 +88,11 @@ export default function NewOrder({ loader, user }) {
       price: Number(selectedCurrentItem.price),
       pickupLocation: selectedCurrentItem.pickupLocation,
       stock: selectedCurrentItem.stock,
+      deliveryUrgency: deliveryType,
+      scheduledDateTime: deliveryType === "Scheduled" ? dateTime : null,
+      temperatureRequirements: temperatureRequirements,
+      hipaaFdaCompliance: complianceAlert ? "Yes" : "No",
+      description: description.trim() || "No description provided",
     };
 
     setSelectedItems([...selectedItems, newItem]);
@@ -79,6 +101,14 @@ export default function NewOrder({ loader, user }) {
     setSelectedCurrentItem(null);
     setFilteredItems(items);
     setMaxQty(0);
+    
+    // Reset form fields for next item
+    setDeliveryType("Stat");
+    setDateTime(null);
+    setTemperatureRequirements("Controlled");
+    setComplianceAlert(false);
+    setDescription("");
+    
     toast.success("Item added successfully");
   };
 
@@ -102,6 +132,12 @@ export default function NewOrder({ loader, user }) {
       return;
     }
 
+    // Validate hospital selection for CLIENT users
+    if (user?.role === 'CLIENT' && !selectedHospital?._id) {
+      toast.error("Please select a hospital for delivery");
+      return;
+    }
+
     console.log("Form submitted with items:", selectedItems);
     loader(true);
 
@@ -115,7 +151,14 @@ export default function NewOrder({ loader, user }) {
         pickupCity: item.pickupLocation.city,
         pickupState: item.pickupLocation.state,
         pickupZipcode: item.pickupLocation.zipcode,
+        deliveryUrgency: item.deliveryUrgency,
+        scheduledDateTime: item.scheduledDateTime,
+        temperatureRequirements: item.temperatureRequirements,
+        hipaaFdaCompliance: item.hipaaFdaCompliance,
+        description: item.description,
       })),
+      // Only send hospitalId when user is a CLIENT
+      ...(user?.role === 'CLIENT' && selectedHospital?._id && { hospitalId: selectedHospital._id }),
     };
 
     Api("POST", "/order/create", orderData, router)
@@ -125,9 +168,15 @@ export default function NewOrder({ loader, user }) {
           toast.success("Order created successfully!");
           resetForm();
           setSelectedItems([]);
+          setSelectedHospital(null);
           setCurrentItemInput("");
           setCurrentQty("");
           setSelectedCurrentItem(null);
+          setDeliveryType("Stat");
+          setDateTime(null);
+          setTemperatureRequirements("Controlled");
+          setComplianceAlert(false);
+          setDescription("");
           //   router.push("/orders");
         } else {
           toast.error("Failed to create order. Please try again.");
@@ -184,6 +233,14 @@ export default function NewOrder({ loader, user }) {
     setFilteredItems(_filteredItems);
   };
 
+  const searchHospitals = (event) => {
+    const query = event.query.toLowerCase();
+    const _filteredHospitals = hospitals.filter((hospital) =>
+      hospital.name.toLowerCase().includes(query)
+    );
+    setFilteredHospitals(_filteredHospitals);
+  };
+
   return (
     <Layout title={"Create New Order"}>
       <Formik
@@ -207,9 +264,34 @@ export default function NewOrder({ loader, user }) {
               </h2>
               <div className="p-4 sm:p-6">
                 {/* Item(S) and Qty Row */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end">
+                <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 items-end`}>
+                  {user?.role === 'CLIENT' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Hospital *
+                      </label>
+                      <AutoComplete
+                        value={selectedHospital}
+                        suggestions={filteredHospitals}
+                        completeMethod={searchHospitals}
+                        field="name"
+                        onChange={(e) => {
+                          setSelectedHospital(e.value);
+                        }}
+                        onSelect={(e) => {
+                          const selectedItem = e.value;
+                          setSelectedHospital(selectedItem); // Set the entire hospital object, not just the name
+                        }}
+                        dropdown
+                        placeholder="Select or type hospital"
+                        inputClassName="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
+                        className="w-full"
+                        panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
+                      />
+                    </div>
+                  )}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-800 mb-2">
                       Item(S)
                     </label>
                     {/* <Dropdown data={items} value={currentItemInput} selected={handleItemSelect} changed={handleItemChange} /> */}
@@ -218,16 +300,6 @@ export default function NewOrder({ loader, user }) {
                       suggestions={filteredItems}
                       completeMethod={searchItems}
                       field="name"
-                      // onDropdownClick={() => {
-                      //   console.log("Dropdown clicked, setting all items");
-                      //   setFilteredItems(items || []);
-                      // }}
-                      // onFocus={() => {
-                      //   console.log("AutoComplete focused, ensuring items are available");
-                      //   if (!filteredItems || filteredItems.length === 0) {
-                      //     setFilteredItems(items || []);
-                      //   }
-                      // }}
                       onChange={(e) => {
                         setCurrentItemInput(e.value);
                       }}
@@ -246,7 +318,7 @@ export default function NewOrder({ loader, user }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-gray-800 mb-2">
                       Qty
                     </label>
                     <input
@@ -259,19 +331,171 @@ export default function NewOrder({ loader, user }) {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
                     />
                   </div>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={addItem}
-                      className="bg-secondary hover:bg-secondary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition-colors cursor-pointer h-10"
-                    >
-                      <PlusIcon className="h-5 w-5 inline-block mr-2" />
-                      Add Item
-                    </button>
-                  </div>
                 </div>
 
-                {/* Selected Items List */}
+                <section className="mb-6">
+                  <div className="grid md:grid-cols-6 gap-4 mb-3">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Delivery Urgency
+                      </label>
+                      <div className="flex flex-wrap gap-2 w-full items-center">
+                        <button
+                          type="button"
+                          className={`px-4 py-1 h-10 min-w-32 rounded border text-sm ${
+                            deliveryType === "Stat"
+                              ? "bg-secondary text-white border-secondary"
+                              : "bg-gray-200 text-gray-800 border-gray-300"
+                          }`}
+                          onClick={() => {
+                            setDeliveryType("Stat");
+                            setDateTime(null);
+                          }}
+                        >
+                          STAT
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-4 py-1 h-10 min-w-32 rounded border text-sm ${
+                            deliveryType === "Same-Day"
+                              ? "bg-secondary text-white border-secondary"
+                              : "bg-gray-200 text-gray-800 border-gray-300"
+                          }`}
+                          onClick={() => {
+                            setDeliveryType("Same-Day");
+                            setDateTime(null);
+                          }}
+                        >
+                          Same-Day
+                        </button>
+                        <div
+                          className="flex-auto relative"
+                          onClick={() => setDeliveryType("Scheduled")}
+                        >
+                          <button
+                            type="button"
+                            className={`px-4 py-1 h-10 min-w-32 rounded border text-sm ${
+                              deliveryType === "Scheduled"
+                                ? "bg-secondary text-white border-secondary"
+                                : "bg-gray-200 text-gray-800 border-gray-300"
+                            }`}
+                          >
+                            Scheduled
+                          </button>
+                          <Calendar
+                            className="!opacity-0 !h-10 !w-32 !absolute !left-0"
+                            id="calendar-12h"
+                            value={dateTime}
+                            onChange={(e) => {
+                              setDateTime(e.value);
+                              setDeliveryType("Scheduled");
+                            }}
+                            showTime
+                            hourFormat="12"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Temperature Requirements
+                      </label>
+                      <div className="flex flex-wrap gap-2 w-full items-center">
+                        <button
+                          type="button"
+                          className={`px-4 py-1 h-10 min-w-32 rounded border text-sm ${
+                            temperatureRequirements === "Controlled"
+                              ? "bg-secondary text-white border-secondary"
+                              : "bg-gray-200 text-gray-800 border-gray-300"
+                          }`}
+                          onClick={() =>
+                            setTemperatureRequirements("Controlled")
+                          }
+                        >
+                          Controlled
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-4 py-1 h-10 min-w-32 rounded border text-sm ${
+                            temperatureRequirements === "Room Temperature"
+                              ? "bg-secondary text-white border-secondary"
+                              : "bg-gray-200 text-gray-800 border-gray-300"
+                          }`}
+                          onClick={() =>
+                            setTemperatureRequirements("Room Temperature")
+                          }
+                        >
+                          Room Temperature
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {dateTime && (
+                    <span className="text-primary text-sm">
+                      Your Delivery Date is:{" "}
+                      {dateTime?.toLocaleString("en-US", {
+                        month: "numeric",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </span>
+                  )}
+                  {deliveryType === "Same-Day" && (
+                    <>
+                      {/* <span className="text-primary text-sm">
+                        Nearest Driver <strong>John Doe</strong>
+                      </span>{" "}
+                      <br />
+                      <span className="text-primary text-sm">
+                        Estimated Arrival: <strong>30 mins</strong>
+                      </span> */}
+                    </>
+                  )}
+                    <div className="my-4">
+                      <span className="block text-sm font-semibold text-gray-800 mb-2">
+                       Compliance Alert
+                      </span>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          className="mr-2"
+                          checked={complianceAlert}
+                          onChange={(e) => setComplianceAlert(e.target.checked)}
+                        />
+                        <span className="text-sm text-gray-600">
+                          HIPAA / FDA Compliance
+                        </span>
+                      </div>
+                    </div>
+                  <div className="grid md:grid-cols-6 gap-4 mt-2 items-center">
+                    <div className="col-span-4">
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        className="w-full rounded border px-3 py-2 text-sm text-black border-gray-200"
+                        rows={3}
+                        placeholder="Description..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={addItem}
+                        className="bg-primary hover:bg-primary text-white font-medium py-2 px-6 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors cursor-pointer h-10"
+                      >
+                        <PlusIcon className="h-5 w-5 inline-block mr-2" />
+                        Add More Item
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
                 {selectedItems.length > 0 && (
                   <div className="mb-6">
                     <h3 className="text-md font-semibold text-gray-800 mb-3">
@@ -323,6 +547,42 @@ export default function NewOrder({ loader, user }) {
                               {item.pickupLocation?.state}{" "}
                               {item.pickupLocation?.zipcode}
                             </div>
+                            <div className="text-sm flex text-gray-600 mt-1 items-center">
+                              <span className="font-medium">Delivery Urgency:</span>{" "}
+                              <span className="ml-1">
+                                {item.deliveryUrgency}
+                                {item.deliveryUrgency === "Scheduled" && item.scheduledDateTime && (
+                                  <span className="text-primary ml-2">
+                                    ({new Date(item.scheduledDateTime).toLocaleString("en-US", {
+                                      month: "numeric",
+                                      day: "numeric", 
+                                      year: "numeric",
+                                      hour: "numeric",
+                                      minute: "2-digit",
+                                      hour12: true,
+                                    })})
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                            <div className="text-sm flex text-gray-600 mt-1 items-center">
+                              <span className="font-medium">Temperature Requirements:</span>{" "}
+                              <span className="ml-1">
+                                {item.temperatureRequirements}
+                              </span>
+                            </div>
+                            <div className="text-sm flex text-gray-600 mt-1 items-center">
+                              <span className="font-medium">HIPAA / FDA Compliance:</span>{" "}
+                              <span className="ml-1">
+                                {item.hipaaFdaCompliance}
+                              </span>
+                            </div>
+                            <div className="text-sm flex text-gray-600 mt-1 items-center">
+                              <span className="font-medium">Description:</span>{" "}
+                              <span className="ml-1">
+                                {item.description}
+                              </span>
+                            </div>
                           </div>
                           <button
                             type="button"
@@ -338,144 +598,6 @@ export default function NewOrder({ loader, user }) {
                   </div>
                 )}
 
-                {/* Delivery Location Section */}
-                {/* <div className="mb-6">
-                  <h3 className="text-md font-semibold text-[#003C72] mb-3">
-                    Delivery Location
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Address
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Address"
-                        name="deliveryLocation.address"
-                        value={values.deliveryLocation.address}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                      />
-                      <span className="text-sm text-red-600">
-                        {errors.deliveryLocation?.address &&
-                          touched.deliveryLocation?.address &&
-                          errors.deliveryLocation.address}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        City
-                      </label>
-                      <AutoComplete
-                        value={values.deliveryLocation.city}
-                        suggestions={filteredCities}
-                        completeMethod={searchCities}
-                        onDropdownClick={() => {
-                          setFilteredCities(allCities);
-                        }}
-                        onChange={(e) => {
-                          const cityValue = e.value || e.target.value;
-                          handleChange({
-                            target: {
-                              name: "deliveryLocation.city",
-                              value: cityValue,
-                            },
-                          });
-                          // setSelectedCity(cityValue);
-                          if (cityValue) {
-                            const state = getStateByCity(cityValue);
-                            // setDetectedState(state);
-                            if (state) {
-                              handleChange({
-                                target: {
-                                  name: "deliveryLocation.state",
-                                  value: state,
-                                },
-                              });
-                            }
-                          }
-                        }}
-                        dropdown
-                        placeholder="Select or type city"
-                        inputClassName="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
-                        className="w-full"
-                        panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
-                        itemTemplate={(item) => (
-                          <div className="px-3 py-2 hover:bg-gray-100 text-sm">
-                            {item}
-                          </div>
-                        )}
-                      />
-                      <span className="text-sm text-red-600">
-                        {errors.deliveryLocation?.city &&
-                          touched.deliveryLocation?.city &&
-                          errors.deliveryLocation.city}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        State
-                      </label>
-                      <AutoComplete
-                        value={values.deliveryLocation.state}
-                        suggestions={filteredStates}
-                        completeMethod={searchStates}
-                        onDropdownClick={() => {
-                          setFilteredStates(allStates);
-                        }}
-                        onChange={(e) => {
-                          const stateValue = e.value || e.target.value;
-                          handleChange({
-                            target: {
-                              name: "deliveryLocation.state",
-                              value: stateValue,
-                            },
-                          });
-                          // setSelectedState(stateValue);
-                        }}
-                        dropdown
-                        placeholder="Select or type state"
-                        inputClassName="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:!ring-2 focus:!ring-blue-500 focus:!border-blue-500 !text-sm text-gray-700"
-                        className="w-full"
-                        panelClassName="border border-gray-300 rounded-md shadow-lg bg-white max-h-64 overflow-y-auto"
-                        itemTemplate={(item) => (
-                          <div className="px-3 py-2 hover:bg-gray-100 text-sm">
-                            {item}
-                          </div>
-                        )}
-                      />
-                      <span className="text-sm text-red-600">
-                        {errors.deliveryLocation?.state &&
-                          touched.deliveryLocation?.state &&
-                          errors.deliveryLocation.state}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Zipcode
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Zipcode"
-                        name="deliveryLocation.zipcode"
-                        value={values.deliveryLocation.zipcode}
-                        onChange={handleChange}
-                        maxLength={5}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md h-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-700"
-                      />
-                      <span className="text-sm text-red-600">
-                        {errors.deliveryLocation?.zipcode &&
-                          touched.deliveryLocation?.zipcode &&
-                          errors.deliveryLocation.zipcode}
-                      </span>
-                    </div>
-                  </div>
-                </div> */}
-                
-                <div className="mb-6">
-
-                  </div>
-
                 {/* Submit Button */}
                 <div className="flex flex-wrap justify-between items-center">
                   <div className="text-sm text-gray-600">
@@ -490,17 +612,33 @@ export default function NewOrder({ loader, user }) {
                         </span>
                         <span className="mt-1">
                           Delivery Location:{" "}
-                          {user?.delivery_Address
-                            ? `${user.delivery_Address.address}, ${user.delivery_Address.city}, ${user.delivery_Address.state} ${user.delivery_Address.zipcode}`
-                            : "Not provided"}
-                          <Link
-                            href="/account-info"
-                            className="text-secondary hover:underline ml-2"
-                          >
-                            <span className="text-secondary hover:underline">
-                              Update Address
-                            </span>
-                          </Link>
+                          {user?.role === 'CLIENT' ? (
+                            // For CLIENT users, show selected hospital's delivery address
+                            selectedHospital?.delivery_Address ? (
+                              `${selectedHospital.delivery_Address.address}, ${selectedHospital.delivery_Address.city}, ${selectedHospital.delivery_Address.state} ${selectedHospital.delivery_Address.zipcode}`
+                            ) : selectedHospital ? (
+                              "Hospital delivery address not provided"
+                            ) : (
+                              "Please select a hospital first"
+                            )
+                          ) : (
+                            // For HOSPITAL users, show their own delivery address
+                            user?.delivery_Address ? (
+                              `${user.delivery_Address.address}, ${user.delivery_Address.city}, ${user.delivery_Address.state} ${user.delivery_Address.zipcode}`
+                            ) : (
+                              "Not provided"
+                            )
+                          )}
+                          {user?.role !== 'CLIENT' && (
+                            <Link
+                              href="/account-info"
+                              className="text-secondary hover:underline ml-2"
+                            >
+                              <span className="text-secondary hover:underline">
+                                Update Address
+                              </span>
+                            </Link>
+                          )}
                         </span>
                       </div>
                     )}

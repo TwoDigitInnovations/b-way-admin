@@ -77,6 +77,62 @@ function ApiFormData(method, url, data, router) {
   });
 }
 
+function ApiGetPdf(url, data, router, params) {
+  return new Promise(function (resolve, reject) {
+    let token = "";
+    if (typeof window !== "undefined") {
+      token = localStorage?.getItem("token") || "";
+    }
+
+    axios({
+      method: "GET",
+      url: ConstantsUrl + url,
+      data,
+      headers: { Authorization: `jwt ${token}` },
+      params,
+      responseType: "blob",
+    }).then(
+      (res) => {
+        const file = new Blob([res.data], { type: "application/pdf" });
+        const fileURL = window.URL.createObjectURL(file);
+        // window.open(fileURL); // open file in browser do not touch if not to open pdf immediatly
+
+        const link = document.createElement("a");
+        link.href = fileURL;
+        link.setAttribute("download", "file.pdf");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        resolve(res.data);
+      },
+      (err) => {
+        console.log("Error:", err);
+        if (err.response) {
+          const status = err.response.status;
+          const message = err.response?.data?.message || "";
+
+          if (
+            (status === 401 || status === 403) &&
+            typeof window !== "undefined"
+          ) {
+            if (
+              message.toLowerCase().includes("jwt expired") ||
+              message.toLowerCase().includes("unauthorized")
+            ) {
+              localStorage.removeItem("token");
+              localStorage.removeItem("userDetail");
+              router?.push("/signIn");
+            }
+          }
+          reject(err.response.data);
+        } else {
+          reject(err);
+        }
+      }
+    );
+  });
+}
+
 const pdfDownload = async (fileName, data) => {
   return new Promise(function (resolve, reject) {
     pdfMake.vfs = {};
@@ -112,4 +168,4 @@ const replaceUrl =(url)=>{
  return url?.replace('https://surfacegallery.s3.eu-north-1.amazonaws.com','https://d1wm56uk2e4fvb.cloudfront.net')
 }
 
-export { Api, pdfDownload, ApiFormData,replaceUrl };
+export { Api, pdfDownload, ApiFormData,replaceUrl, ApiGetPdf };

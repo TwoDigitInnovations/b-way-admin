@@ -31,7 +31,7 @@ const Sidebar = () => {
       icon: "/images/s1.png",
       label: "Items",
       href: "/items",
-      role: ["ADMIN", "DISPATCHER", "CLIENT"],
+      role: ["CLIENT"],
     },
     {
       icon: "/images/s1.png",
@@ -43,13 +43,13 @@ const Sidebar = () => {
       icon: "/images/s1.png",
       label: "New Delivery Request",
       href: "/new-order",
-      role: ["HOSPITAL", "CLINIC"],
+      role: ["HOSPITAL", "CLINIC", "CLIENT"],
     },
     {
       icon: "/images/s2.png",
       label: "Routes & Schedules",
       href: "/allroutes",
-      role: ["ADMIN", "HOSPITAL", "CLINIC"],
+      role: ["ADMIN", "HOSPITAL", "CLINIC", , "DISPATCHER"],
     },
     {
       icon: "/images/s3.png",
@@ -61,7 +61,7 @@ const Sidebar = () => {
       icon: "/images/s4.png",
       label: "Drivers & Vehicles",
       href: "/alldrivers",
-      role: ["ADMIN"],
+      role: ["ADMIN", , "DISPATCHER"],
     },
     {
       icon: "/images/s8.png",
@@ -73,7 +73,7 @@ const Sidebar = () => {
       icon: "/images/s5.png",
       label: "Compliance Reports",
       href: "/compliance-report",
-      role: ["ADMIN"],
+      role: ["ADMIN", , "DISPATCHER"],
     },
     {
       icon: "/images/s8.png",

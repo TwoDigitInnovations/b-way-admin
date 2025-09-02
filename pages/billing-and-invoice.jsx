@@ -137,7 +137,7 @@ export default function NewInvoice() {
         </section>
 
         {/* Delivery & Services */}
-        <section className="bg-white rounded shadow p-7 mb-6">
+        {/* <section className="bg-white rounded shadow p-7 mb-6">
           <h2 className="text-lg font-semibold text-black mb-4">
             Delivery & Services
           </h2>
@@ -215,7 +215,7 @@ export default function NewInvoice() {
               placeholder="Description..."
             />
           </div>
-        </section>
+        </section> */}
 
         {/* Pricing Calculator */}
         <section className="bg-white rounded shadow p-7 mb-6">
